@@ -1,0 +1,36 @@
+2026-10-06 22:08:43,497 - INFO - Logger initialized at results/results_belgium/TimesFM/Sampling_100/Run_1/training_log.txt
+2026-10-06 22:08:45,238 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/revision/main "HTTP/1.1 200 OK"
+2026-10-06 22:08:45,503 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/tree/0581e2c56cb06feb51cfd98fc2b4005b74f7187b?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-10-06 22:08:45,767 - INFO - HTTP Request: HEAD https://huggingface.co/google/timesfm-1.0-200m-pytorch/resolve/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/torch_model.ckpt "HTTP/1.1 302 Found"
+2026-10-06 22:08:45,791 - INFO - HTTP Request: HEAD https://huggingface.co/google/timesfm-1.0-200m-pytorch/resolve/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/.gitattributes "HTTP/1.1 307 Temporary Redirect"
+2026-10-06 22:08:45,822 - INFO - HTTP Request: HEAD https://huggingface.co/google/timesfm-1.0-200m-pytorch/resolve/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-10-06 22:08:45,822 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-06 22:08:45,835 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/.gitattributes?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2F.gitattributes=&etag=%22a6344aac8c09253b3b630fb776ae94478aa0275b%22 "HTTP/1.1 200 OK"
+2026-10-06 22:08:45,864 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/README.md?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2FREADME.md=&etag=%22af78a0c72935f541bde8d8fa6eda1951a9f87bba%22 "HTTP/1.1 200 OK"
+2026-10-06 22:08:45,883 - INFO - HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/.gitattributes?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2F.gitattributes=&etag=%22a6344aac8c09253b3b630fb776ae94478aa0275b%22 "HTTP/1.1 200 OK"
+2026-10-06 22:08:45,915 - INFO - HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/README.md?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2FREADME.md=&etag=%22af78a0c72935f541bde8d8fa6eda1951a9f87bba%22 "HTTP/1.1 200 OK"
+2026-10-06 22:08:46,028 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/xet-read-token/0581e2c56cb06feb51cfd98fc2b4005b74f7187b "HTTP/1.1 200 OK"
+2026-10-06 22:12:48,026 - INFO - Loading checkpoint from /home/cinnamoll/.cache/huggingface/hub/models--google--timesfm-1.0-200m-pytorch/snapshots/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/torch_model.ckpt
+2026-10-06 22:12:48,125 - INFO - Sending checkpoint to device cuda:0
+2026-10-06 22:12:48,425 - INFO - ...Start TimesFM forecasting...
+2026-10-06 22:12:48,425 - INFO - Forecasting PV
+2026-10-06 22:12:48,469 - INFO - Running TimesFM PV_house_1 for 8544 samples (100% of training set)...
+2026-10-06 22:12:48,854 - INFO - PV_house_1 - MAE: 0.0943, RMSE: 0.1538
+2026-10-06 22:12:49,428 - INFO - Running TimesFM PV_house_2 for 8544 samples (100% of training set)...
+2026-10-06 22:12:49,576 - INFO - PV_house_2 - MAE: 0.1116, RMSE: 0.2050
+2026-10-06 22:12:49,743 - INFO - Running TimesFM PV_house_3 for 8544 samples (100% of training set)...
+2026-10-06 22:12:49,890 - INFO - PV_house_3 - MAE: 0.0953, RMSE: 0.1528
+2026-10-06 22:12:50,121 - INFO - Running TimesFM PV_house_4 for 8544 samples (100% of training set)...
+2026-10-06 22:12:50,268 - INFO - PV_house_4 - MAE: 0.0974, RMSE: 0.1557
+2026-10-06 22:12:50,385 - INFO - Forecasting BESS
+2026-10-06 22:12:50,421 - INFO - Running TimesFM BESS_house_1 for 8544 samples (100% of training set)...
+2026-10-06 22:12:50,568 - INFO - BESS_house_1 - MAE: 0.0852, RMSE: 0.1268
+2026-10-06 22:12:50,708 - INFO - Running TimesFM BESS_house_2 for 8544 samples (100% of training set)...
+2026-10-06 22:12:50,857 - INFO - BESS_house_2 - MAE: 0.1646, RMSE: 0.2030
+2026-10-06 22:12:51,005 - INFO - Running TimesFM BESS_house_3 for 8544 samples (100% of training set)...
+2026-10-06 22:12:51,153 - INFO - BESS_house_3 - MAE: 0.1482, RMSE: 0.2065
+2026-10-06 22:12:51,299 - INFO - Running TimesFM BESS_house_4 for 8544 samples (100% of training set)...
+2026-10-06 22:12:51,446 - INFO - BESS_house_4 - MAE: 0.0720, RMSE: 0.0973
+2026-10-06 22:12:51,551 - INFO - Saved model metrics to results/results_belgium/TimesFM/Sampling_100/Run_1/model_metrics_summary.csv
+2026-10-06 22:12:51,789 - INFO - ...End TimesFM forecasting...
+2026-10-06 22:12:51,789 - INFO - Forecasting completed in 3.36 seconds.
