@@ -1,0 +1,35 @@
+2026-10-07 22:45:34,475 - INFO - Logger initialized at results/results_belgium/MQCNN/Sampling_100/Epochs_100_2/training_log.txt
+2026-10-07 22:45:34,475 - INFO - ...Start training using MQCNN with 100.0% sampling rate...
+2026-10-07 22:45:34,475 - INFO - Training PV models
+2026-10-07 22:45:34,509 - INFO - Using random seed: 1791387934
+2026-10-07 22:45:34,510 - INFO - Training PV_house_1 model on 8544 samples...
+2026-10-07 22:45:34,519 - INFO - Start model training
+2026-10-07 22:45:34,520 - INFO - Epoch[0] Learning rate is 0.001
+2026-10-07 22:45:39,472 - ERROR - Skipping model MQCNN run 2 at sampling 100.0% due to error: local variable 'epoch_loss' referenced before assignment
+Traceback (most recent call last):
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/trainer/_base.py", line 423, in __call__
+    num_batches_to_use=self.num_batches_per_epoch,
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/trainer/_base.py", line 323, in loop
+    if not np.isfinite(ndarray.sum(loss).asscalar()):
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/mxnet/ndarray/ndarray.py", line 2590, in asscalar
+    return self.asnumpy()[0]
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/mxnet/ndarray/ndarray.py", line 2571, in asnumpy
+    ctypes.c_size_t(data.size)))
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "models/models_gluonts.py", line 133, in paper_forecasting_train
+    train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_name, model_class, sampling_rate, epochs, ctx)
+  File "models/models_gluonts.py", line 89, in train_all_models
+    _, pv_mae, pv_rmse = train_gluonts_model(pv_data, f"PV_house_{house}", save_dir, model_class, sampling_rate, forecast_horizon, freq, epochs, ctx)
+  File "models/models_gluonts.py", line 64, in train_gluonts_model
+    predictor = estimator.train(training_data=train_ds)
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/model/estimator.py", line 243, in train
+    cache_data=cache_data,
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/model/estimator.py", line 219, in train_model
+    validation_iter=validation_data_loader,
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/trainer/_base.py", line 493, in __call__
+    "score": loss_value(epoch_loss),
+UnboundLocalError: local variable 'epoch_loss' referenced before assignment

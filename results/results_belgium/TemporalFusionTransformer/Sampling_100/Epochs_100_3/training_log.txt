@@ -1,0 +1,47 @@
+2026-10-07 17:04:28,657 - INFO - Logger initialized at results/results_belgium/TemporalFusionTransformer/Sampling_100/Epochs_100_3/training_log.txt
+2026-10-07 17:04:28,657 - INFO - ...Start training using TemporalFusionTransformer with 100.0% sampling rate...
+2026-10-07 17:04:28,657 - INFO - Training PV models
+2026-10-07 17:04:28,681 - INFO - Using random seed: 1791367468
+2026-10-07 17:04:28,681 - INFO - Training PV_house_1 model on 8544 samples...
+2026-10-07 17:04:28,773 - INFO - Start model training
+2026-10-07 17:04:28,780 - INFO - Epoch[0] Learning rate is 0.001
+2026-10-07 17:04:29,241 - ERROR - Skipping model TemporalFusionTransformer run 3 at sampling 100.0% due to error: Traceback (most recent call last):
+  File "../src/operator/nn/./../mxnet_op.h", line 1120
+Name: Check failed: err == cudaSuccess (2 vs. 0) : mxnet_generic_kernel ErrStr:out of memory
+Traceback (most recent call last):
+  File "models/models_gluonts.py", line 133, in paper_forecasting_train
+    train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_name, model_class, sampling_rate, epochs, ctx)
+  File "models/models_gluonts.py", line 89, in train_all_models
+    _, pv_mae, pv_rmse = train_gluonts_model(pv_data, f"PV_house_{house}", save_dir, model_class, sampling_rate, forecast_horizon, freq, epochs, ctx)
+  File "models/models_gluonts.py", line 64, in train_gluonts_model
+    predictor = estimator.train(training_data=train_ds)
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/model/estimator.py", line 243, in train
+    cache_data=cache_data,
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/model/estimator.py", line 219, in train_model
+    validation_iter=validation_data_loader,
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/trainer/_base.py", line 423, in __call__
+    num_batches_to_use=self.num_batches_per_epoch,
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/gluonts/mx/trainer/_base.py", line 323, in loop
+    if not np.isfinite(ndarray.sum(loss).asscalar()):
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/mxnet/ndarray/ndarray.py", line 2590, in asscalar
+    return self.asnumpy()[0]
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/mxnet/ndarray/ndarray.py", line 2571, in asnumpy
+    ctypes.c_size_t(data.size)))
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/mxnet/base.py", line 246, in check_call
+    raise get_last_ffi_error()
+mxnet.base.MXNetError: Traceback (most recent call last):
+  File "../src/operator/nn/./../mxnet_op.h", line 1120
+Name: Check failed: err == cudaSuccess (2 vs. 0) : mxnet_generic_kernel ErrStr:out of memory
+2026-10-07 17:04:29,313 - ERROR - Skipping model TemporalFusionTransformer run 4 at sampling 100.0% due to error: Traceback (most recent call last):
+  File "../src/ndarray/../operator/tensor/./../mxnet_op.h", line 1120
+Name: Check failed: err == cudaSuccess (2 vs. 0) : mxnet_generic_kernel ErrStr:out of memory
+Traceback (most recent call last):
+  File "models/models_gluonts.py", line 131, in paper_forecasting_train
+    mx.nd.waitall()
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/mxnet/ndarray/ndarray.py", line 211, in waitall
+    check_call(_LIB.MXNDArrayWaitAll())
+  File "/home/cinnamoll/anaconda3/envs/gluonts/lib/python3.7/site-packages/mxnet/base.py", line 246, in check_call
+    raise get_last_ffi_error()
+mxnet.base.MXNetError: Traceback (most recent call last):
+  File "../src/ndarray/../operator/tensor/./../mxnet_op.h", line 1120
+Name: Check failed: err == cudaSuccess (2 vs. 0) : mxnet_generic_kernel ErrStr:out of memory
