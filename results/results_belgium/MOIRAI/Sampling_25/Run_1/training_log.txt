@@ -1,0 +1,56 @@
+2026-10-11 20:00:00,687 - INFO - Logger initialized at results/results_belgium/MOIRAI/Sampling_25/Run_1/training_log.txt
+2026-10-11 20:00:00,688 - INFO - ...Start Uni2TS/Moirai forecasting...
+2026-10-11 20:00:00,688 - INFO - Forecasting PV
+2026-10-11 20:00:00,759 - INFO - Running Moirai PV_house_1 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:00,759 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:01,058 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:01,059 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-11 20:00:01,070 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:01,455 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:02,519 - INFO - PV_house_1 - MAE: 0.0659, RMSE: 0.1020
+2026-10-11 20:00:02,974 - INFO - Running Moirai PV_house_2 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:02,975 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:03,226 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:03,237 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:03,617 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:03,869 - INFO - PV_house_2 - MAE: 0.0695, RMSE: 0.1107
+2026-10-11 20:00:04,039 - INFO - Running Moirai PV_house_3 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:04,040 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:04,292 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:04,304 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:04,632 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:04,886 - INFO - PV_house_3 - MAE: 0.0691, RMSE: 0.1052
+2026-10-11 20:00:05,044 - INFO - Running Moirai PV_house_4 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:05,044 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:05,297 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:05,307 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:05,665 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:05,927 - INFO - PV_house_4 - MAE: 0.0736, RMSE: 0.1090
+2026-10-11 20:00:06,030 - INFO - Forecasting BESS
+2026-10-11 20:00:06,085 - INFO - Running Moirai BESS_house_1 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:06,085 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:06,335 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:06,344 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:06,744 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:07,000 - INFO - BESS_house_1 - MAE: 0.1137, RMSE: 0.1552
+2026-10-11 20:00:07,309 - INFO - Running Moirai BESS_house_2 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:07,309 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:07,576 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:07,652 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:08,030 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:08,321 - INFO - BESS_house_2 - MAE: 0.1744, RMSE: 0.2194
+2026-10-11 20:00:08,463 - INFO - Running Moirai BESS_house_3 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:08,464 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:08,723 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:08,731 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:09,057 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:09,336 - INFO - BESS_house_3 - MAE: 0.1871, RMSE: 0.2516
+2026-10-11 20:00:09,490 - INFO - Running Moirai BESS_house_4 for 2136 samples (25% of original training set)...
+2026-10-11 20:00:09,491 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-11 20:00:09,737 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-11 20:00:09,746 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-11 20:00:10,074 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-11 20:00:10,328 - INFO - BESS_house_4 - MAE: 0.0777, RMSE: 0.1236
+2026-10-11 20:00:10,433 - INFO - Saved model metrics to results/results_belgium/MOIRAI/Sampling_25/Run_1/model_metrics_summary.csv
+2026-10-11 20:00:10,661 - INFO - ...End Uni2TS/Moirai forecasting...
+2026-10-11 20:00:10,661 - INFO - Forecasting completed in 9.97 seconds.
