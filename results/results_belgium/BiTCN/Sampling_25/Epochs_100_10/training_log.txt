@@ -1,0 +1,35 @@
+2026-10-12 09:55:28,363 - INFO - Logger initialized at /content/drive/MyDrive/results/results_belgium/BiTCN/Sampling_25/Epochs_100_10/training_log.txt
+2026-10-12 09:55:28,363 - INFO - ...Start training for 100 epochs using BiTCN...
+2026-10-12 09:55:28,363 - INFO - Training PV models
+2026-10-12 09:55:28,397 - INFO - Using random seed: 1791798928
+2026-10-12 09:55:28,398 - INFO - Training BiTCN PV_house_1 model on 2136 samples (25.0% of original training set)...
+2026-10-12 09:55:28,416 - ERROR - Skipping model BiTCN due to error: No supported gpu backend found!
+Traceback (most recent call last):
+  File "/content/Forecast-Models-Evaluation/models/models_neuralforecast.py", line 156, in paper_forecasting_train
+    train_all_models(
+  File "/content/Forecast-Models-Evaluation/models/models_neuralforecast.py", line 102, in train_all_models
+    _, pv_mae, pv_rmse = neural_forecast_model(
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/content/Forecast-Models-Evaluation/models/models_neuralforecast.py", line 75, in neural_forecast_model
+    nf.fit(df=train_df, val_size=forecast_horizon)
+  File "/usr/local/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/core.py", line 562, in fit
+    self.models[i] = model.fit(
+                     ^^^^^^^^^^
+  File "/usr/local/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_base_model.py", line 1486, in fit
+    return self._fit(
+           ^^^^^^^^^^
+  File "/usr/local/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_base_model.py", line 547, in _fit
+    trainer = pl.Trainer(**model.trainer_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/utilities/argparse.py", line 70, in insert_env_defaults
+    return fn(self, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 417, in __init__
+    self._accelerator_connector = _AcceleratorConnector(
+                                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/connectors/accelerator_connector.py", line 142, in __init__
+    self._accelerator_flag = self._choose_gpu_accelerator_backend()
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/connectors/accelerator_connector.py", line 341, in _choose_gpu_accelerator_backend
+    raise MisconfigurationException("No supported gpu backend found!")
+lightning_fabric.utilities.exceptions.MisconfigurationException: No supported gpu backend found!

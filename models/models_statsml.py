@@ -17,7 +17,6 @@ from utils.metrics import split_train_test, calculate_metrics, forecast_plot_and
 from utils.dataset_config import DatasetBelgium1D, DatasetGermany1D, DatasetLondon1D, DatasetZonnedael1D
 from utils.device import GPU_HELP, uses_gpu
 
-
 def setup_model_logger(save_dir):
     os.makedirs(save_dir, exist_ok=True)
     log_file = os.path.join(save_dir, "training_log.txt")
