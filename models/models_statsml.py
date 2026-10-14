@@ -43,12 +43,13 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
         y_test = y.iloc[-forecast_horizon:]
         logging.info(f"Training {model_type} model for {model_name} on {len(y_train)} samples (univariate)...")
         if model_type == "ARIMA":
-            d_order = pm.arima.ndiffs(y_train, alpha=0.05, test='kpss', max_d=2)
+            y_arr = y_train.to_numpy(dtype=float) 
+            d_order = pm.arima.ndiffs(y_arr, alpha=0.05, test='kpss', max_d=2)
             # If you MUST use seasonality, pre-calculate D as well.
             # Note: With m=48, this can still be slow.
-            D_order = pm.arima.nsdiffs(y_train, m=48, max_D=1, test='ch')
+            D_order = pm.arima.nsdiffs(y_arr, m=48, max_D=1, test='ch')
             model = pm.auto_arima(
-                y_train,
+                y_arr,
                 start_p=0, start_q=0,
                 max_p=1, max_q=1,
                 start_P=0, start_Q=0,
