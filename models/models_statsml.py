@@ -38,25 +38,16 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
     logging.info(f"Using random seed: {current_seed}")
     if is_univariate:
         # Univariate setup
-        step = int(100 / sampling_rate)
-        y = y.iloc[::step]
-        pts_per_day = 96 // step
-        m = max(1, pts_per_day) # seasonal
-        
         y = y.iloc[::int(100/sampling_rate)]
         y_train = y.iloc[:-forecast_horizon]
         y_test = y.iloc[-forecast_horizon:]
         logging.info(f"Training {model_type} model for {model_name} on {len(y_train)} samples (univariate)...")
-        
-        train_days = 7
-        y_train = y_train.iloc[-train_days * pts_per_day:]   # ~14 ngày gần nhất
-        y_arr = y_train.to_numpy(dtype=float)
         if model_type == "ARIMA":
             y_arr = y_train.to_numpy(dtype=float) 
             d_order = pm.arima.ndiffs(y_arr, alpha=0.05, test='kpss', max_d=2)
             # If you MUST use seasonality, pre-calculate D as well.
             # Note: With m=48, this can still be slow.
-            D_order = pm.arima.nsdiffs(y_arr, m=m, max_D=1, test='ch')
+            D_order = pm.arima.nsdiffs(y_arr, m=48, max_D=1, test='ch')
             model = pm.auto_arima(
                 y_arr,
                 start_p=0, start_q=0,
@@ -65,7 +56,7 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
                 max_P=1, max_Q=1,
                 d=d_order,                # Use pre-calculated d
                 D=D_order,                # Use pre-calculated D
-                m=m,                     
+                m=48,                     
                 seasonal=True,
                 stepwise=True,
                 trace=True,
