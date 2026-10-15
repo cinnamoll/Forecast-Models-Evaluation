@@ -48,7 +48,7 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
         y_test = y.iloc[-forecast_horizon:]
         logging.info(f"Training {model_type} model for {model_name} on {len(y_train)} samples (univariate)...")
         
-        train_days = 14
+        train_days = 7
         y_train = y_train.iloc[-train_days * pts_per_day:]   # ~14 ngày gần nhất
         y_arr = y_train.to_numpy(dtype=float)
         if model_type == "ARIMA":

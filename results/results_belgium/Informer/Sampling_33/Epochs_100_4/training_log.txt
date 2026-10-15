@@ -1,146 +1,31 @@
-2026-10-11 11:29:57,015 - INFO - Logger initialized at results/results_belgium/Informer/Sampling_33/Epochs_100_4/training_log.txt
-2026-10-11 11:29:57,016 - INFO - ...Start training for 100 epochs using Informer...
-2026-10-11 11:29:57,016 - INFO - Training PV models
-2026-10-11 11:29:57,044 - INFO - Using random seed: 1791692997
-2026-10-11 11:29:57,044 - INFO - Training Informer PV_house_1 model on 2849 samples (33.33% of original training set)...
-2026-10-11 11:29:57,364 - ERROR - Skipping model Informer due to error: CUDA out of memory. Tried to allocate 946.00 MiB. GPU 0 has a total capacity of 3.68 GiB of which 504.06 MiB is free. Including non-PyTorch memory, this process has 3.17 GiB memory in use. Of the allocated memory 2.17 GiB is allocated by PyTorch, and 912.24 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-Traceback (most recent call last):
-  File "/home/cinnamoll/Code/Forecast-Models-Evaluation/models/models_neuralforecast.py", line 156, in paper_forecasting_train
-    train_all_models(
-  File "/home/cinnamoll/Code/Forecast-Models-Evaluation/models/models_neuralforecast.py", line 102, in train_all_models
-    _, pv_mae, pv_rmse = neural_forecast_model(
-                         ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/Code/Forecast-Models-Evaluation/models/models_neuralforecast.py", line 75, in neural_forecast_model
-    nf.fit(df=train_df, val_size=forecast_horizon)
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/core.py", line 562, in fit
-    self.models[i] = model.fit(
-                     ^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_base_model.py", line 1486, in fit
-    return self._fit(
-           ^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_base_model.py", line 548, in _fit
-    trainer.fit(model, datamodule=datamodule)
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 584, in fit
-    call._call_and_handle_interrupt(
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 49, in _call_and_handle_interrupt
-    return trainer_fn(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 630, in _fit_impl
-    self._run(model, ckpt_path=ckpt_path, weights_only=weights_only)
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1079, in _run
-    results = self._run_stage()
-              ^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/trainer.py", line 1123, in _run_stage
-    self.fit_loop.run()
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 217, in run
-    self.advance()
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/fit_loop.py", line 469, in advance
-    self.epoch_loop.run(self._data_fetcher)
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 153, in run
-    self.advance(data_fetcher)
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/training_epoch_loop.py", line 352, in advance
-    batch_output = self.automatic_optimization.run(trainer.optimizers[0], batch_idx, kwargs)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 192, in run
-    self._optimizer_step(batch_idx, closure)
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 270, in _optimizer_step
-    call._call_lightning_module_hook(
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 177, in _call_lightning_module_hook
-    output = fn(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/core/module.py", line 1368, in optimizer_step
-    optimizer.step(closure=optimizer_closure)
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/core/optimizer.py", line 154, in step
-    step_output = self._strategy.optimizer_step(self._optimizer, closure, **kwargs)
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 239, in optimizer_step
-    return self.precision_plugin.optimizer_step(optimizer, model=model, closure=closure, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 123, in optimizer_step
-    return optimizer.step(closure=closure, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/optim/lr_scheduler.py", line 137, in wrapper
-    return func.__get__(opt, opt.__class__)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/optim/optimizer.py", line 487, in wrapper
-    out = func(*args, **kwargs)
-          ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/optim/optimizer.py", line 91, in _use_grad
-    ret = func(self, *args, **kwargs)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/optim/adam.py", line 202, in step
-    loss = closure()
-           ^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/plugins/precision/precision.py", line 109, in _wrap_closure
-    closure_result = closure()
-                     ^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 146, in __call__
-    self._result = self.closure(*args, **kwargs)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 131, in closure
-    step_output = self._step_fn()
-                  ^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/loops/optimization/automatic.py", line 319, in _training_step
-    training_step_output = call._call_strategy_hook(trainer, "training_step", *kwargs.values())
-                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/trainer/call.py", line 329, in _call_strategy_hook
-    output = fn(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pytorch_lightning/strategies/strategy.py", line 391, in training_step
-    return self.lightning_module.training_step(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_base_model.py", line 1262, in training_step
-    output = self(windows_batch)
-             ^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/models/informer.py", line 435, in forward
-    dec_out = self.decoder(dec_out, enc_out, x_mask=None, cross_mask=None)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_modules.py", line 310, in forward
-    x = layer(x, cross, x_mask=x_mask, cross_mask=cross_mask)
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_modules.py", line 291, in forward
-    self.cross_attention(x, cross, cross, attn_mask=cross_mask)[0]
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/common/_modules.py", line 343, in forward
-    out, attn = self.inner_attention(
-                ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/models/informer.py", line 166, in forward
-    scores_top, index = self._prob_QK(queries, keys, sample_k=U_part, n_top=u)
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/neuralforecast/models/informer.py", line 103, in _prob_QK
-    K_sample = K_expand[:, :, torch.arange(L_Q).unsqueeze(1), index_sample, :]
-               ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 946.00 MiB. GPU 0 has a total capacity of 3.68 GiB of which 504.06 MiB is free. Including non-PyTorch memory, this process has 3.17 GiB memory in use. Of the allocated memory 2.17 GiB is allocated by PyTorch, and 912.24 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+2026-10-14 14:34:09,624 - INFO - Logger initialized at /kaggle/working/results/results_belgium/Informer/Sampling_33/Epochs_100_4/training_log.txt
+2026-10-14 14:34:09,624 - INFO - ...Start training for 100 epochs using Informer...
+2026-10-14 14:34:09,624 - INFO - Training PV models
+2026-10-14 14:34:09,660 - INFO - Using random seed: 1791988449
+2026-10-14 14:34:09,661 - INFO - Training Informer PV_house_1 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:34:41,791 - INFO - PV_house_1 - MAE: 0.1112, RMSE: 0.1398
+2026-10-14 14:34:42,039 - INFO - Using random seed: 1791988482
+2026-10-14 14:34:42,039 - INFO - Training Informer PV_house_2 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:35:14,134 - INFO - PV_house_2 - MAE: 0.1144, RMSE: 0.1521
+2026-10-14 14:35:14,383 - INFO - Using random seed: 1791988514
+2026-10-14 14:35:14,384 - INFO - Training Informer PV_house_3 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:35:46,638 - INFO - PV_house_3 - MAE: 0.1200, RMSE: 0.1475
+2026-10-14 14:35:46,864 - INFO - Using random seed: 1791988546
+2026-10-14 14:35:46,864 - INFO - Training Informer PV_house_4 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:36:19,015 - INFO - PV_house_4 - MAE: 0.1106, RMSE: 0.1555
+2026-10-14 14:36:19,218 - INFO - Training BESS models
+2026-10-14 14:36:19,260 - INFO - Using random seed: 1791988579
+2026-10-14 14:36:19,260 - INFO - Training Informer BESS_house_1 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:36:51,488 - INFO - BESS_house_1 - MAE: 0.0894, RMSE: 0.1320
+2026-10-14 14:36:51,782 - INFO - Using random seed: 1791988611
+2026-10-14 14:36:51,783 - INFO - Training Informer BESS_house_2 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:37:24,103 - INFO - BESS_house_2 - MAE: 0.1740, RMSE: 0.2241
+2026-10-14 14:37:24,340 - INFO - Using random seed: 1791988644
+2026-10-14 14:37:24,341 - INFO - Training Informer BESS_house_3 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:37:56,560 - INFO - BESS_house_3 - MAE: 0.1518, RMSE: 0.2031
+2026-10-14 14:37:56,783 - INFO - Using random seed: 1791988676
+2026-10-14 14:37:56,783 - INFO - Training Informer BESS_house_4 model on 2849 samples (33.33% of original training set)...
+2026-10-14 14:38:28,840 - INFO - BESS_house_4 - MAE: 0.0680, RMSE: 0.1175
+2026-10-14 14:38:29,039 - INFO - Saved model metrics to /kaggle/working/results/results_belgium/Informer/Sampling_33/Epochs_100_4/model_metrics_summary.csv
+2026-10-14 14:38:29,447 - INFO - ...End training...
+2026-10-14 14:38:29,447 - INFO - Training completed in 259.82 seconds.
