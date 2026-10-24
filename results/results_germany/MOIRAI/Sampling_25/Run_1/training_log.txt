@@ -1,0 +1,15 @@
+2026-10-23 18:41:37,031 - INFO - Logger initialized at results/results_germany/MOIRAI/Sampling_25/Run_1/training_log.txt
+2026-10-23 18:41:37,031 - INFO - ...Start Uni2TS/Moirai forecasting...
+2026-10-23 18:41:37,031 - INFO - Forecasting Germany load
+2026-10-23 18:41:37,100 - INFO - Running Moirai germany_load for 2136 samples (25% of original training set)...
+2026-10-23 18:41:37,101 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-23 18:41:37,407 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-23 18:41:37,408 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-23 18:41:37,418 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-23 18:41:37,427 - INFO - HTTP Request: GET https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-23 18:41:37,923 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-23 18:41:38,194 - INFO - HTTP Request: GET https://huggingface.co/api/models/Salesforce/moirai-1.1-R-small/xet-read-token/0c24ab99db2c1a70ea2a0fc03bf113329772ac64 "HTTP/1.1 200 OK"
+2026-10-23 18:41:48,876 - INFO - germany_load - MAE: 0.0888, RMSE: 0.1885
+2026-10-23 18:41:49,311 - INFO - Saved model metrics to results/results_germany/MOIRAI/Sampling_25/Run_1/model_metrics_summary.csv
+2026-10-23 18:41:49,456 - INFO - ...End Uni2TS/Moirai forecasting...
+2026-10-23 18:41:49,456 - INFO - Forecasting completed in 12.42 seconds.

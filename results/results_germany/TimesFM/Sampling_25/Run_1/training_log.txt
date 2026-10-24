@@ -1,0 +1,22 @@
+2026-10-23 18:35:31,517 - INFO - Logger initialized at results/results_germany/TimesFM/Sampling_25/Run_1/training_log.txt
+2026-10-23 18:35:31,856 - INFO - HTTP Request: GET https://huggingface.co/api/agent-harnesses "HTTP/1.1 200 OK"
+2026-10-23 18:35:32,124 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/revision/main "HTTP/1.1 200 OK"
+2026-10-23 18:35:32,422 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/tree/0581e2c56cb06feb51cfd98fc2b4005b74f7187b?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-10-23 18:35:32,682 - INFO - HTTP Request: HEAD https://huggingface.co/google/timesfm-1.0-200m-pytorch/resolve/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-10-23 18:35:32,695 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/README.md?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2FREADME.md=&etag=%22af78a0c72935f541bde8d8fa6eda1951a9f87bba%22 "HTTP/1.1 200 OK"
+2026-10-23 18:35:32,709 - INFO - HTTP Request: HEAD https://huggingface.co/google/timesfm-1.0-200m-pytorch/resolve/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/.gitattributes "HTTP/1.1 307 Temporary Redirect"
+2026-10-23 18:35:32,710 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-23 18:35:32,711 - INFO - HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/README.md?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2FREADME.md=&etag=%22af78a0c72935f541bde8d8fa6eda1951a9f87bba%22 "HTTP/1.1 200 OK"
+2026-10-23 18:35:32,714 - INFO - HTTP Request: HEAD https://huggingface.co/google/timesfm-1.0-200m-pytorch/resolve/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/torch_model.ckpt "HTTP/1.1 302 Found"
+2026-10-23 18:35:32,725 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/.gitattributes?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2F.gitattributes=&etag=%22a6344aac8c09253b3b630fb776ae94478aa0275b%22 "HTTP/1.1 200 OK"
+2026-10-23 18:35:32,744 - INFO - HTTP Request: GET https://huggingface.co/api/resolve-cache/models/google/timesfm-1.0-200m-pytorch/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/.gitattributes?%2Fgoogle%2Ftimesfm-1.0-200m-pytorch%2Fresolve%2F0581e2c56cb06feb51cfd98fc2b4005b74f7187b%2F.gitattributes=&etag=%22a6344aac8c09253b3b630fb776ae94478aa0275b%22 "HTTP/1.1 200 OK"
+2026-10-23 18:35:32,984 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/xet-read-token/0581e2c56cb06feb51cfd98fc2b4005b74f7187b "HTTP/1.1 200 OK"
+2026-10-23 18:37:03,629 - INFO - Loading checkpoint from /home/cinnamoll/.cache/huggingface/hub/models--google--timesfm-1.0-200m-pytorch/snapshots/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/torch_model.ckpt
+2026-10-23 18:37:03,721 - INFO - Sending checkpoint to device cuda:0
+2026-10-23 18:37:04,346 - INFO - ...Start TimesFM forecasting...
+2026-10-23 18:37:04,347 - INFO - Forecasting Germany load
+2026-10-23 18:37:04,373 - INFO - Running TimesFM germany_load for 2136 samples (25% of training set)...
+2026-10-23 18:37:04,735 - INFO - germany_load - MAE: 0.0746, RMSE: 0.1844
+2026-10-23 18:37:05,074 - INFO - Saved model metrics to results/results_germany/TimesFM/Sampling_25/Run_1/model_metrics_summary.csv
+2026-10-23 18:37:05,199 - INFO - ...End TimesFM forecasting...
+2026-10-23 18:37:05,199 - INFO - Forecasting completed in 0.85 seconds.

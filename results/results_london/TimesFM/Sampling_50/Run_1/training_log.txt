@@ -1,0 +1,11 @@
+2026-10-23 18:37:51,579 - INFO - Logger initialized at results/results_london/TimesFM/Sampling_50/Run_1/training_log.txt
+2026-10-23 18:37:51,944 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/revision/main "HTTP/1.1 200 OK"
+2026-10-23 18:37:54,065 - INFO - Loading checkpoint from /home/cinnamoll/.cache/huggingface/hub/models--google--timesfm-1.0-200m-pytorch/snapshots/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/torch_model.ckpt
+2026-10-23 18:37:54,188 - INFO - Sending checkpoint to device cuda:0
+2026-10-23 18:37:55,087 - INFO - ...Start TimesFM forecasting...
+2026-10-23 18:37:55,088 - INFO - Forecasting London load
+2026-10-23 18:37:55,120 - INFO - Running TimesFM london_load for 8658 samples (50% of training set)...
+2026-10-23 18:37:55,771 - INFO - london_load - MAE: 0.0243, RMSE: 0.0341
+2026-10-23 18:37:56,210 - INFO - Saved model metrics to results/results_london/TimesFM/Sampling_50/Run_1/model_metrics_summary.csv
+2026-10-23 18:37:56,386 - INFO - ...End TimesFM forecasting...
+2026-10-23 18:37:56,386 - INFO - Forecasting completed in 1.30 seconds.

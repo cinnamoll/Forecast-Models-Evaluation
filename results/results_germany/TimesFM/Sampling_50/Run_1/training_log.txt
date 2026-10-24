@@ -1,0 +1,11 @@
+2026-10-23 18:37:18,905 - INFO - Logger initialized at results/results_germany/TimesFM/Sampling_50/Run_1/training_log.txt
+2026-10-23 18:37:19,307 - INFO - HTTP Request: GET https://huggingface.co/api/models/google/timesfm-1.0-200m-pytorch/revision/main "HTTP/1.1 200 OK"
+2026-10-23 18:37:21,644 - INFO - Loading checkpoint from /home/cinnamoll/.cache/huggingface/hub/models--google--timesfm-1.0-200m-pytorch/snapshots/0581e2c56cb06feb51cfd98fc2b4005b74f7187b/torch_model.ckpt
+2026-10-23 18:37:21,750 - INFO - Sending checkpoint to device cuda:0
+2026-10-23 18:37:22,585 - INFO - ...Start TimesFM forecasting...
+2026-10-23 18:37:22,585 - INFO - Forecasting Germany load
+2026-10-23 18:37:22,612 - INFO - Running TimesFM germany_load for 4272 samples (50% of training set)...
+2026-10-23 18:37:23,218 - INFO - germany_load - MAE: 0.0589, RMSE: 0.1528
+2026-10-23 18:37:23,602 - INFO - Saved model metrics to results/results_germany/TimesFM/Sampling_50/Run_1/model_metrics_summary.csv
+2026-10-23 18:37:23,778 - INFO - ...End TimesFM forecasting...
+2026-10-23 18:37:23,778 - INFO - Forecasting completed in 1.19 seconds.

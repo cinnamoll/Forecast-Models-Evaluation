@@ -1,0 +1,25 @@
+2026-10-23 18:42:49,645 - INFO - Logger initialized at results/results_zonnedael/MOIRAI/Sampling_25/Run_1/training_log.txt
+2026-10-23 18:42:49,645 - INFO - ...Start Uni2TS/Moirai forecasting...
+2026-10-23 18:42:49,645 - INFO - Forecasting Zonnedael customers
+2026-10-23 18:42:49,797 - INFO - Running Moirai zonnedael_customer_8 for 4296 samples (25% of original training set)...
+2026-10-23 18:42:49,798 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-23 18:42:50,174 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-23 18:42:50,175 - WARNING - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-23 18:42:50,204 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-23 18:42:50,633 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-23 18:42:51,584 - INFO - zonnedael_customer_8 - MAE: 0.0752, RMSE: 0.1011
+2026-10-23 18:42:52,130 - INFO - Running Moirai zonnedael_customer_9 for 4296 samples (25% of original training set)...
+2026-10-23 18:42:52,130 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-23 18:42:52,441 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-23 18:42:52,473 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-23 18:42:52,972 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-23 18:42:53,437 - INFO - zonnedael_customer_9 - MAE: 0.0962, RMSE: 0.1598
+2026-10-23 18:42:53,708 - INFO - Running Moirai zonnedael_customer_43 for 4296 samples (25% of original training set)...
+2026-10-23 18:42:53,708 - WARNING - Frequency inferred as H. Reindexing to uniform frequency 60T.
+2026-10-23 18:42:54,003 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-10-23 18:42:54,040 - INFO - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/Salesforce/moirai-1.1-R-small/0c24ab99db2c1a70ea2a0fc03bf113329772ac64/config.json?%2FSalesforce%2Fmoirai-1.1-R-small%2Fresolve%2Fmain%2Fconfig.json=&etag=%22ae2a0de8172dba3af57413d0d459723ecf714773%22 "HTTP/1.1 200 OK"
+2026-10-23 18:42:54,465 - INFO - HTTP Request: HEAD https://huggingface.co/Salesforce/moirai-1.1-R-small/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-10-23 18:42:54,805 - INFO - zonnedael_customer_43 - MAE: 0.0399, RMSE: 0.0640
+2026-10-23 18:42:54,926 - INFO - Saved model metrics to results/results_zonnedael/MOIRAI/Sampling_25/Run_1/model_metrics_summary.csv
+2026-10-23 18:42:55,105 - INFO - ...End Uni2TS/Moirai forecasting...
+2026-10-23 18:42:55,105 - INFO - Forecasting completed in 5.46 seconds.
