@@ -17,6 +17,8 @@ from utils.metrics import split_train_test, calculate_metrics, forecast_plot_and
 from utils.dataset_config import DatasetBelgium1D, DatasetGermany1D, DatasetLondon1D, DatasetZonnedael1D
 from utils.device import GPU_HELP, uses_gpu
 
+WINDOW_DAYS = [14, 30, 60, 90]
+
 def setup_model_logger(save_dir):
     os.makedirs(save_dir, exist_ok=True)
     log_file = os.path.join(save_dir, "training_log.txt")
@@ -31,7 +33,7 @@ def setup_model_logger(save_dir):
     logging.info(f"Logger initialized at {log_file}")
 
 # Generalized model training function for both univariate and multivariate models
-def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu):
+def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days=None):
     current_seed = int(time.time() * 1000) % (2**32 - 1)  # Ensure higher variability
     is_univariate = X is None
     logging.info(f"Run {run_num} - {model_name} - {model_type}")
@@ -41,34 +43,35 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
         y = y.iloc[::int(100/sampling_rate)]
         y_train = y.iloc[:-forecast_horizon]
         y_test = y.iloc[-forecast_horizon:]
-        logging.info(f"Training {model_type} model for {model_name} on {len(y_train)} samples (univariate)...")
+        logging.info(f"Training {model_type} model for {model_name} on {len(y_train)} samples (univariate) on {window_days} days...")
         if model_type == "ARIMA":
-            y_arr = y_train.to_numpy(dtype=float) 
-            d_order = pm.arima.ndiffs(y_arr, alpha=0.05, test='kpss', max_d=2)
-            # If you MUST use seasonality, pre-calculate D as well.
-            # Note: With m=48, this can still be slow.
-            D_order = pm.arima.nsdiffs(y_arr, m=48, max_D=1, test='ch')
-            model = pm.auto_arima(
-                y_arr,
-                start_p=0, start_q=0,
-                max_p=1, max_q=1,
-                start_P=0, start_Q=0,
-                max_P=1, max_Q=1,
-                d=d_order,                # Use pre-calculated d
-                D=D_order,                # Use pre-calculated D
-                m=48,                     
-                seasonal=True,
-                stepwise=True,
-                trace=True,
-                error_action='ignore',
-                suppress_warnings=True,
-                information_criterion='aic',
-                max_order=4,
-                maxiter=10,               # Allow the model to converge reasonably
-                # Use n_jobs=-1 for parallel processing if stepwise=False,
-                # but with stepwise=True, this has limited effect.
-            )
-            preds = model.predict(n_periods=forecast_horizon)
+            for w in [14, 30, 60, 90, 180]:
+                y_arr = y_train.to_numpy(dtype=float)[-(48 * window_days):]
+                d_order = pm.arima.ndiffs(y_arr, alpha=0.05, test='kpss', max_d=2)
+                # If you MUST use seasonality, pre-calculate D as well.
+                # Note: With m=48, this can still be slow.
+                D_order = pm.arima.nsdiffs(y_arr, m=48, max_D=1, test='ch')
+                model = pm.auto_arima(
+                    y_arr,
+                    start_p=0, start_q=0,
+                    max_p=1, max_q=1,
+                    start_P=0, start_Q=0,
+                    max_P=1, max_Q=1,
+                    d=d_order,                # Use pre-calculated d
+                    D=D_order,                # Use pre-calculated D
+                    m=48,                     
+                    seasonal=True,
+                    stepwise=True,
+                    trace=True,
+                    error_action='ignore',
+                    suppress_warnings=True,
+                    information_criterion='aic',
+                    max_order=4,
+                    maxiter=10,               # Allow the model to converge reasonably
+                    # Use n_jobs=-1 for parallel processing if stepwise=False,
+                    # but with stepwise=True, this has limited effect.
+                )
+                preds = model.predict(n_periods=forecast_horizon)
         elif model_type == "NaiveMovingAverage":
             k = int(forecast_horizon / 1)
             hist = y_train.tolist().copy()
@@ -117,76 +120,76 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
         forecast_plot_and_csv(df_plot, model_name, save_dir)
         return model, mae, rmse
 
-def train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu):
+def train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
         y = dataset.get_pv_data(house, start_dt, end_dt)[1]
-        return generic_model(None, y, f"pv_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+        return generic_model(None, y, f"pv_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
     else:
         X, y = dataset.get_pv_data(house, start_dt, end_dt)
         return generic_model(X, y, f"pv_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
 
-def train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu):
+def train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
         y = dataset.get_battery_data(house, start_dt, end_dt)[1]
-        return generic_model(None, y, f"bess_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+        return generic_model(None, y, f"bess_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
     else:
         X, y = dataset.get_battery_data(house, start_dt, end_dt)
         return generic_model(X, y, f"bess_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
 
-def train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu):
+def train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
         y = dataset.get_load_data()[1]
-        return generic_model(None, y, "london_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+        return generic_model(None, y, "london_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
     else:
         X, y = dataset.get_load_data()
         return generic_model(X, y, "london_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
 
-def train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu):
+def train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
         y = dataset.get_load_data(start_dt, end_dt)[1]
-        return generic_model(None, y, "germany_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+        return generic_model(None, y, "germany_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
     else:
         X, y = dataset.get_load_data(start_dt, end_dt)
         return generic_model(X, y, "germany_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
 
-def train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu):
+def train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days=None):
     metrics = []
     customer_ids = [8, 9, 43]
     for customer_number in customer_ids:
         if model_type in ["NaiveMovingAverage", "ARIMA"]:
             _, y = dataset.get_inputs_for_zonnedael_consumption(customer_number)
             _, mae, rmse = generic_model(
-                None, y, f"zonnedael_customer_{customer_number}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu
+                None, y, f"zonnedael_customer_{customer_number}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days
             )
         else:
             X, y = dataset.get_inputs_for_zonnedael_consumption(customer_number)
             _, mae, rmse = generic_model(
-                X, y, f"zonnedael_customer_{customer_number}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu
+                X, y, f"zonnedael_customer_{customer_number}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days
             )
         metrics.append({"model": f"zonnedael_load_{customer_number}", "MAE": mae, "RMSE": rmse})
     return metrics
 
 # Unified training pipeline
-def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu):
+def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days=None):
     setup_model_logger(save_dir)
     metrics = []
     start_time = time.time()
     logging.info(f"Run {run_num}: Start training {model_type} models...")
     if dataset_name == "belgium":
         for house in [1, 2, 3, 4]:
-            _, pv_mae, pv_rmse = train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+            _, pv_mae, pv_rmse = train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
             metrics.append({"model": f"pv_house_{house}", "MAE": pv_mae, "RMSE": pv_rmse})
         for house in [1, 2, 3, 4]:
-            _, battery_mae, battery_rmse = train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+            _, battery_mae, battery_rmse = train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
             metrics.append({"model": f"bess_house_{house}", "MAE": battery_mae, "RMSE": battery_rmse})
     elif dataset_name == "germany":
-        _, mae, rmse = train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+        _, mae, rmse = train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
         metrics.append({"model": "germany_load", "MAE": mae, "RMSE": rmse})
     elif dataset_name == "london":
-        _, mae, rmse = train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+        _, mae, rmse = train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
         metrics.append({"model": "london_load", "MAE": mae, "RMSE": rmse})
     elif dataset_name == "zonnedael":
-        zonnedael_metrics = train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+        zonnedael_metrics = train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, window_days)
         metrics.extend(zonnedael_metrics)
     pd.DataFrame(metrics).to_csv(os.path.join(save_dir, "model_metrics_summary.csv"), index=False, float_format="%.6f")
     plot_model_metrics(metrics, save_dir)
@@ -201,8 +204,25 @@ def paper_forecasting_train(dataset_name, dataset, run_num, model_type, sampling
     step = round(100 / sampling_rate)       
     forecast_horizon = 192 // step           # 192, 96, 64, 48
     save_dir = results_dir / f"results_{dataset_name}/{model_type}/Sampling_{sampling_rate:.0f}/Run_{run_num}"
-    train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
+    
+    def _run(window_days):
+        base = results_dir / f"results_{dataset_name}/{model_type}/Sampling_{sampling_rate:.0f}"
+        save_dir = base / (f"Window_{window_days}d/Run_{run_num}" if window_days is not None else f"Run_{run_num}")
+        train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_type, run_num,
+                         sampling_rate, forecast_horizon, gpu, window_days)
 
+    if model_type == "ARIMA":
+        for w in WINDOW_DAYS:
+            try:
+                gc.collect()
+                _run(w)
+            except Exception as e:   # một cửa sổ lỗi không làm mất các cửa sổ còn lại
+                logging.error(f"ARIMA window {w}d (Sampling {sampling_rate}) failed: {e}", exc_info=True)
+            finally:
+                gc.collect()
+    else:
+        _run(None)
+        
 if __name__ == "__main__":
     dataset_classes = dict(belgium=DatasetBelgium1D, germany=DatasetGermany1D, london=DatasetLondon1D, zonnedael=DatasetZonnedael1D)
     deterministic_models = {"ARIMA", 
@@ -214,8 +234,10 @@ if __name__ == "__main__":
         default=["NaiveMovingAverage"], help="Models to evaluate.")
     parser.add_argument("--runs", type=int, help="Runs per model; otherwise 1 for deterministic models and 10 for others.")
     parser.add_argument("--gpu", type=int, default=-1, help=GPU_HELP)
+    parser.add_argument("--window_days", nargs="+", type=int, default=WINDOW_DAYS, help="ARIMA training windows (days).")
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")
     args = parser.parse_args()
+    WINDOW_DAYS = args.window_days
     dataset = dataset_classes[args.dataset]()
     for sampling_rate in args.sampling_rates:
         for model_type in args.models:
