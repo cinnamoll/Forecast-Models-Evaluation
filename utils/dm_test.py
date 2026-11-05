@@ -366,7 +366,7 @@ if __name__ == "__main__":
         "TimerXL": "Timer-XL",
     }
     parser = argparse.ArgumentParser(description="Compute and plot DM test heatmaps for model comparisons.")
-    parser.add_argument("--datasets", nargs="+", choices=["belgium", "germany", "london", "zonnedael"], default=["zonnedael"], help="Datasets to compare.")
+    parser.add_argument("--datasets", nargs="+", choices=["belgium", "germany", "london", "zonnedael"], default=["london"], help="Datasets to compare.")
     parser.add_argument("--base_dir", type=Path, default=PROJECT_ROOT, help="Project directory containing results.")
     parser.add_argument("--output_dir", type=Path, help="Output root; otherwise <base_dir>/results/dm_test.")
     parser.add_argument("--font_size", type=int, default=9, help="Plot font size.")
