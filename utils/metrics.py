@@ -36,7 +36,6 @@ def setup_logger(save_dir):
 
 def min_max_normalize(X):
     scaler = MinMaxScaler()
-    # If input is a Series or 1D array, reshape to 2D
     if isinstance(X, pd.Series):
         X_values = X.values.reshape(-1, 1)
         X_scaled = scaler.fit_transform(X_values)
@@ -48,11 +47,11 @@ def min_max_normalize(X):
         return pd.DataFrame(scaler.fit_transform(X), index=X.index, columns=X.columns)
 
 # Save forecast vs actual CSV and PDF plot
-def forecast_plot_and_csv(df, model_name, save_dir):
+def forecast_plot_and_csv(df, model_name, save_dir, title=None):
     csv_path = os.path.join(save_dir, f"{model_name}_forecast_vs_actual.csv")
     pdf_path = os.path.join(save_dir, f"{model_name}_forecast_vs_actual.pdf")
     df.to_csv(csv_path, float_format="%.6f")
-    df.plot(figsize=(12, 5), title=f"Forecast vs Actual - {model_name}")
+    df.plot(figsize=(12, 5), title=title or f"Forecast vs Actual - {model_name}")
     plt.ylabel("Normalized Value")
     plt.xlabel("Datetime")
     plt.tight_layout()

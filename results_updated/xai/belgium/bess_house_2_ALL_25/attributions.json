@@ -1,0 +1,53 @@
+{
+  "dataset": "belgium",
+  "series": "bess_house_2",
+  "level": "ALL",
+  "sampling": 25.0,
+  "granularity": {
+    "LightGBM": "column"
+  },
+  "models": {
+    "LightGBM": {
+      "quarter_hour": 0.003738724763556379,
+      "is_weekend": 0.0015247310634821055,
+      "hour_sin": 0.009576764171134301,
+      "hour_cos": 0.01306251906881928,
+      "dayofweek_sin": 0.00481384579173953,
+      "dayofweek_cos": 0.0025125471093795787,
+      "month_sin": 0.01160657900636978,
+      "month_cos": 0.009406392943722135,
+      "is_holiday": 0.0,
+      "is_bridge_day": 0.0,
+      "is_dst": 0.0,
+      "is_school_holiday": 0.0005686265262211063,
+      "hour": 0.004882506860440189,
+      "dayofweek": 0.0038390897714088456,
+      "month": 0.005360906746489788,
+      "temperature": 0.009926654181169224,
+      "apparent_temperature": 0.004765204970039575,
+      "hdd": 0.0058820020746408325,
+      "cdd": 0.0,
+      "ghi": 0.0178481121345047,
+      "dni": 0.004885464537536629,
+      "cloud_cover": 0.004254889238261916,
+      "humidity": 0.010623296393709137,
+      "wind_speed": 0.004000118292915956,
+      "precipitation": 0.0038064895704705685,
+      "solar_elevation": 0.036218297835297585,
+      "clear_sky_ghi": 0.015812055556678046,
+      "temp_rolling_mean_24h": 0.005098122158670576,
+      "temp_rolling_std_24h": 0.00764368259662023,
+      "temp_rolling_mean_72h": 0.00393576180764187,
+      "ghi_rolling_mean_24h": 0.010224436811460699,
+      "day_ahead_price": 0.004716092689485029,
+      "static_pv_peak_kwp": 0.0,
+      "static_bess_energy_kwh": 0.0,
+      "static_bess_charge_kw": 0.0,
+      "static_bess_discharge_kw": 0.0,
+      "static_inverter_max_ac_kw": 0.0,
+      "static_house_breaker_kva": 0.0,
+      "static_ac_phase": 0.0,
+      "bess_soc": 0.0062774351643563155
+    }
+  }
+}

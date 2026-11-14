@@ -1,0 +1,39 @@
+2026-11-13 22:37:10,427 - INFO - Logger initialized at results_updated/results_belgium/PatchTST/Sampling_33/ALL/Epochs_100_6/training_log.txt
+2026-11-13 22:37:10,428 - INFO - ...Start training for 100 epochs using PatchTST (exog level ALL)...
+2026-11-13 22:37:10,428 - INFO - Training PV models
+2026-11-13 22:37:10,675 - INFO - Using random seed: 1794584230
+2026-11-13 22:37:10,676 - INFO - Training PatchTST PV_house_1 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:37:10,676 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 39 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:37:18,929 - INFO - PV_house_1 - MAE: 0.0944, RMSE: 0.1506
+2026-11-13 22:37:19,279 - INFO - Using random seed: 1794584239
+2026-11-13 22:37:19,279 - INFO - Training PatchTST PV_house_2 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:37:19,279 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 39 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:37:27,432 - INFO - PV_house_2 - MAE: 0.0997, RMSE: 0.1609
+2026-11-13 22:37:27,726 - INFO - Using random seed: 1794584247
+2026-11-13 22:37:27,727 - INFO - Training PatchTST PV_house_3 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:37:27,727 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 39 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:37:35,929 - INFO - PV_house_3 - MAE: 0.0991, RMSE: 0.1540
+2026-11-13 22:37:36,262 - INFO - Using random seed: 1794584256
+2026-11-13 22:37:36,262 - INFO - Training PatchTST PV_house_4 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:37:36,262 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 39 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:37:45,079 - INFO - PV_house_4 - MAE: 0.0998, RMSE: 0.1558
+2026-11-13 22:37:45,212 - INFO - Training BESS models
+2026-11-13 22:37:45,479 - INFO - Using random seed: 1794584265
+2026-11-13 22:37:45,480 - INFO - Training PatchTST BESS_house_1 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:37:45,480 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 40 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:37:54,251 - INFO - BESS_house_1 - MAE: 0.0686, RMSE: 0.1180
+2026-11-13 22:37:54,920 - INFO - Using random seed: 1794584274
+2026-11-13 22:37:54,920 - INFO - Training PatchTST BESS_house_2 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:37:54,920 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 40 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:38:03,837 - INFO - BESS_house_2 - MAE: 0.1489, RMSE: 0.1957
+2026-11-13 22:38:04,154 - INFO - Using random seed: 1794584284
+2026-11-13 22:38:04,154 - INFO - Training PatchTST BESS_house_3 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:38:04,154 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 40 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:38:12,719 - INFO - BESS_house_3 - MAE: 0.1214, RMSE: 0.1920
+2026-11-13 22:38:13,090 - INFO - Using random seed: 1794584293
+2026-11-13 22:38:13,091 - INFO - Training PatchTST BESS_house_4 model on 2849 samples (33.33% of original training set)...
+2026-11-13 22:38:13,091 - WARNING - PatchTST supports no exogenous inputs at all (NeuralForecast flags futr/hist/stat = {'futr_exog_list': False, 'hist_exog_list': False, 'stat_exog_list': False}); 40 covariate columns are present and will be ignored, so this run is the L0 model for this architecture
+2026-11-13 22:38:22,041 - INFO - BESS_house_4 - MAE: 0.0469, RMSE: 0.0748
+2026-11-13 22:38:22,155 - INFO - Saved model metrics to results_updated/results_belgium/PatchTST/Sampling_33/ALL/Epochs_100_6/model_metrics_summary.csv
+2026-11-13 22:38:22,382 - INFO - ...End training...
+2026-11-13 22:38:22,382 - INFO - Training completed in 71.95 seconds.

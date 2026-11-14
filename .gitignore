@@ -25,7 +25,7 @@ Thumbs.db
 lightning_logs/
 
 # Results and figures
-other/
+tests/
 # results
 data/belgium_dataset/figures/
 data/london_dataset/figures/
@@ -33,3 +33,10 @@ data/zonnedael_dataset/figures/
 papers
 src
 temp.py
+.agents
+.superpowers
+
+# Optuna storage is a resumable cache, not a result; the JSON next to it is
+results/tuning/*.db
+.pytest_cache
+docs/
