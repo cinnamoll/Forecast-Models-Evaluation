@@ -1,0 +1,26 @@
+2026-11-15 22:02:12,930 - INFO - Logger initialized at results_covariate_pre_tune/results_zonnedael/TCN/Sampling_33/COV/Epochs_100_9/training_log.txt
+2026-11-15 22:02:12,930 - INFO - ...Start training for 100 epochs using TCN (covariate level COV)...
+2026-11-15 22:02:12,930 - INFO - Training Zonnedael customer models
+2026-11-15 22:02:12,931 - ERROR - Skipping model TCN due to error: [Errno 2] No such file or directory: '/home/cinnamoll/Code/UntitledFolder/forecast_cov_timeshap/data/zonnedael_dataset/liander_zonnedael_2013_original.csv'
+Traceback (most recent call last):
+  File "/home/cinnamoll/Code/UntitledFolder/forecast_cov_timeshap/models/models_neuralforecast.py", line 237, in paper_forecasting_train
+  File "/home/cinnamoll/Code/UntitledFolder/forecast_cov_timeshap/models/models_neuralforecast.py", line 209, in train_all_models
+  File "/home/cinnamoll/Code/UntitledFolder/forecast_cov_timeshap/utils/dataset_config.py", line 186, in get_inputs_for_zonnedael_consumption
+    df = pd.read_csv(zonnedael_consumption_file)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1866, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 423, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 2721, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 2988, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/home/cinnamoll/anaconda3/envs/neuralforecast/lib/python3.11/site-packages/pandas/io/common.py", line 954, in get_handle
+    handle = open(handle, ioargs.mode)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/cinnamoll/Code/UntitledFolder/forecast_cov_timeshap/data/zonnedael_dataset/liander_zonnedael_2013_original.csv'

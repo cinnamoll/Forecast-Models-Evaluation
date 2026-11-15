@@ -12,9 +12,9 @@ Two rules are not negotiable, because the alternative produces a number that onl
 looks like an improvement:
 
 * **Selection happens on the validation block, never on the test window.**  If the
-  shares that decide what to drop are computed on the same 192 points that are
-  later reported, the reported MAE is the result of a choice made with knowledge
-  of the answer.  ``selection_mae`` is therefore measured on the block of
+  shares that decide what to drop are computed on the very points that are later
+  reported, the reported MAE is the result of a choice made with knowledge of the
+  answer.  ``selection_mae`` is therefore measured on the block of
   ``protocol.validation_windows`` and only ``test_mae`` is a reportable number.
 * **A drop is accepted only if it stays inside the noise.**  ``tolerance`` is the
   MAE difference a run-to-run comparison can produce by itself; with seeds taken

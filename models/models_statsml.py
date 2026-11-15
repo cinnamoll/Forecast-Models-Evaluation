@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 import time
@@ -15,9 +16,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from utils.metrics import split_train_test, calculate_metrics, forecast_plot_and_csv, plot_model_metrics
 from utils.dataset_config import DatasetBelgium1D, DatasetGermany1D, DatasetLondon1D, DatasetZonnedael1D
+from utils.covariates import roles_for, shift_past_only
 from utils.device import GPU_HELP, uses_gpu
-from utils.protocol import COVARIATE_LEVEL, EXOG_LEVEL_CHOICES, run_dir
-from utils.tuning import load_best_params
+from utils.protocol import horizon_for, run_dir
 
 def setup_model_logger(save_dir):
     os.makedirs(save_dir, exist_ok=True)
@@ -31,6 +32,17 @@ def setup_model_logger(save_dir):
         handlers=[logging.FileHandler(log_file, mode='w'), logging.StreamHandler()]
     )
     logging.info(f"Logger initialized at {log_file}")
+
+def load_tuned_params(path):
+    """Best parameters written by ``scripts/tune_optuna.py`` ({} when absent)."""
+    if not path:
+        return {}
+    path = Path(path)
+    if not path.exists():
+        logging.warning("tuned parameters not found at %s; using defaults", path)
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return dict(payload.get("best_params", payload))
 
 # Generalized model training function for both univariate and multivariate models
 def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, params_override=None):
@@ -67,7 +79,7 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
                     information_criterion='aic',
                     max_order=4,
                     maxiter=10,               # Allow the model to converge reasonably
-                    # Use n_jobs=-1 for parallel processing if stepwise=False,
+                    # Use n_jobs=-1 for parallel processing when stepwise=False,
                     # but with stepwise=True, this has limited effect.
                 )
                 preds = model.predict(n_periods=forecast_horizon)
@@ -90,6 +102,18 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
         # Multivariate setup
         X = X.iloc[::int(100/sampling_rate)]
         y = y.iloc[::int(100/sampling_rate)]
+        # A direct multi-step regressor reads the covariates of the row it is
+        # predicting, so every measured covariate (weather, state of charge) is
+        # shifted back by one horizon: the row for t then only carries what a
+        # forecaster had at the origin.  Known-future columns (calendar, price)
+        # are left alone because they are announced in advance.
+        roles = roles_for(X)
+        if roles["past_only"]:
+            X = shift_past_only(X, roles, forecast_horizon)
+            logging.info(
+                "lagged %d past-only covariate(s) by %d steps: %s",
+                len(roles["past_only"]), forecast_horizon, ", ".join(roles["past_only"]),
+            )
         X_train, X_test, y_train, y_test = split_train_test(X, y, test_size=forecast_horizon)
         logging.info(f"Training {model_type} model for {model_name} on {X_train.shape[0]} samples ({sampling_rate}% of original data)...")
         params = {
@@ -106,11 +130,12 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
                 params.update(device_type="gpu", gpu_device_id=gpu)
             else:
                 params["device_type"] = "cpu"
-            # Tuned parameters (plan_updated.md section 5) arrive here; the run
-            # bookkeeping keys above are never overridden by the search.
             if params_override:
-                params.update({k: v for k, v in params_override.items()
-                               if k not in {"random_state", "verbosity", "n_jobs"}})
+                applied = {k: v for k, v in params_override.items()
+                           if k not in {"random_state", "n_jobs", "verbosity", "device_type"}}
+                if applied:
+                    logging.info("LightGBM tuned parameters: %s", applied)
+                    params.update(applied)
             model = lgb.LGBMRegressor(**params).fit(X_train, y_train)
             preds = model.predict(X_test)
         elif model_type == "KNNRegression":
@@ -124,76 +149,77 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
         forecast_plot_and_csv(df_plot, model_name, save_dir)
         return model, mae, rmse
 
-def train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level="L0", params_override=None):
+def train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, level="L0", params_override=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
-        y = dataset.get_pv_data(house, start_dt, end_dt, exog_level=exog_level)[1]
-        return generic_model(None, y, f"pv_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, )
+        y = dataset.get_pv_data(house, start_dt, end_dt, level=level)[1]
+        return generic_model(None, y, f"pv_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
     else:
-        X, y = dataset.get_pv_data(house, start_dt, end_dt, exog_level=exog_level)
+        X, y = dataset.get_pv_data(house, start_dt, end_dt, level=level)
         return generic_model(X, y, f"pv_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, params_override)
 
-def train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level="L0", params_override=None):
+def train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, level="L0", params_override=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
-        y = dataset.get_battery_data(house, start_dt, end_dt, exog_level=exog_level)[1]
+        y = dataset.get_battery_data(house, start_dt, end_dt, level=level)[1]
         return generic_model(None, y, f"bess_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
     else:
-        X, y = dataset.get_battery_data(house, start_dt, end_dt, exog_level=exog_level)
+        X, y = dataset.get_battery_data(house, start_dt, end_dt, level=level)
         return generic_model(X, y, f"bess_house_{house}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, params_override)
 
-def train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level="L0", params_override=None):
+def train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, level="L0", params_override=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
-        y = dataset.get_load_data(exog_level=exog_level)[1]
-        return generic_model(None, y, "london_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, )
+        y = dataset.get_load_data(level=level)[1]
+        return generic_model(None, y, "london_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
     else:
-        X, y = dataset.get_load_data(exog_level=exog_level)
+        X, y = dataset.get_load_data(level=level)
         return generic_model(X, y, "london_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, params_override)
 
-def train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level="L0", params_override=None):
+def train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, level="L0", params_override=None):
     if model_type in ["NaiveMovingAverage", "ARIMA"]:
-        y = dataset.get_load_data(start_dt, end_dt, exog_level=exog_level)[1]
-        return generic_model(None, y, "germany_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, )
+        y = dataset.get_load_data(start_dt, end_dt, level=level)[1]
+        return generic_model(None, y, "germany_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu)
     else:
-        X, y = dataset.get_load_data(start_dt, end_dt, exog_level=exog_level)
+        X, y = dataset.get_load_data(start_dt, end_dt, level=level)
         return generic_model(X, y, "germany_load", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, params_override)
 
-def train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level="L0", params_override=None):
+def train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, level="L0", params_override=None):
     metrics = []
     customer_ids = [8, 9, 43]
     for customer_number in customer_ids:
         if model_type in ["NaiveMovingAverage", "ARIMA"]:
-            _, y = dataset.get_inputs_for_zonnedael_consumption(customer_number, exog_level=exog_level)
+            _, y = dataset.get_inputs_for_zonnedael_consumption(customer_number, level=level)
             _, mae, rmse = generic_model(
                 None, y, f"zonnedael_customer_{customer_number}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu,
             )
         else:
-            X, y = dataset.get_inputs_for_zonnedael_consumption(customer_number, exog_level=exog_level)
+            X, y = dataset.get_inputs_for_zonnedael_consumption(customer_number, level=level)
             _, mae, rmse = generic_model(
-                X, y, f"zonnedael_customer_{customer_number}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, params_override,
+                X, y, f"zonnedael_customer_{customer_number}", save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu,
+                params_override,
             )
         metrics.append({"model": f"zonnedael_load_{customer_number}", "MAE": mae, "RMSE": rmse})
     return metrics
 
 # Unified training pipeline
-def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level="L0", params_override=None):
+def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, level="L0", params_override=None):
     setup_model_logger(save_dir)
     metrics = []
     start_time = time.time()
-    logging.info(f"Run {run_num}: Start training {model_type} models (exog level {exog_level})...")
+    logging.info(f"Run {run_num}: Start training {model_type} models (covariate level {level})...")
     if dataset_name == "belgium":
         for house in [1, 2, 3, 4]:
-            _, pv_mae, pv_rmse = train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level, params_override)
+            _, pv_mae, pv_rmse = train_pv_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, level, params_override)
             metrics.append({"model": f"pv_house_{house}", "MAE": pv_mae, "RMSE": pv_rmse})
         for house in [1, 2, 3, 4]:
-            _, battery_mae, battery_rmse = train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level, params_override)
+            _, battery_mae, battery_rmse = train_battery_model(dataset, start_dt, end_dt, save_dir, house, model_type, run_num, sampling_rate, forecast_horizon, gpu, level, params_override)
             metrics.append({"model": f"bess_house_{house}", "MAE": battery_mae, "RMSE": battery_rmse})
     elif dataset_name == "germany":
-        _, mae, rmse = train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level, params_override)
+        _, mae, rmse = train_germany_consumption_model(dataset, start_dt, end_dt, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, level, params_override)
         metrics.append({"model": "germany_load", "MAE": mae, "RMSE": rmse})
     elif dataset_name == "london":
-        _, mae, rmse = train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level, params_override)
+        _, mae, rmse = train_london_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, level, params_override)
         metrics.append({"model": "london_load", "MAE": mae, "RMSE": rmse})
     elif dataset_name == "zonnedael":
-        zonnedael_metrics = train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, exog_level, params_override)
+        zonnedael_metrics = train_zonnedael_consumption_model(dataset, save_dir, model_type, run_num, sampling_rate, forecast_horizon, gpu, level, params_override)
         metrics.extend(zonnedael_metrics)
     pd.DataFrame(metrics).to_csv(os.path.join(save_dir, "model_metrics_summary.csv"), index=False, float_format="%.6f")
     plot_model_metrics(metrics, save_dir)
@@ -201,21 +227,19 @@ def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_ty
     logging.info(f"Run {run_num}: End training {model_type} models.")
     logging.info(f"Training completed in {end_time - start_time:.2f} seconds.")
 
-def paper_forecasting_train(dataset_name, dataset, run_num, model_type, sampling_rate, gpu, results_dir=PROJECT_ROOT / "results", exog_level="L0", params_override=None):
+def paper_forecasting_train(dataset_name, dataset, run_num, model_type, sampling_rate, gpu, results_dir=PROJECT_ROOT / "results",
+                            level="L0", params_override=None):
     warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
     start_dt = pd.Timestamp("2024-01-01 00:00:00", tz="UTC")
     end_dt = pd.Timestamp("2024-04-01 00:00:00", tz="UTC")
-    step = round(100 / sampling_rate)       
-    forecast_horizon = 192 // step           # 192, 96, 64, 48
-    # L0 keeps the paper's original path; L1-L5 get an extra level component so
-    # the ablation can never overwrite the baseline results.
-    save_dir = run_dir(results_dir, dataset_name, model_type, sampling_rate, run_num, exog_level=exog_level)
+    forecast_horizon = horizon_for(sampling_rate)
+    save_dir = run_dir(results_dir, dataset_name, model_type, sampling_rate, run_num, exog_level=level)
     train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_type, run_num,
-                         sampling_rate, forecast_horizon, gpu, exog_level=exog_level, params_override=params_override)
-        
+                     sampling_rate, forecast_horizon, gpu, level, params_override)
+
 if __name__ == "__main__":
     dataset_classes = dict(belgium=DatasetBelgium1D, germany=DatasetGermany1D, london=DatasetLondon1D, zonnedael=DatasetZonnedael1D)
-    deterministic_models = {"ARIMA", 
+    deterministic_models = {"ARIMA",
                             "NaiveMovingAverage"}
     parser = argparse.ArgumentParser(description="Run statistical and machine-learning forecasts.")
     parser.add_argument("--dataset", choices=["belgium", "germany", "london", "zonnedael"], default="london", help="Dataset to forecast.")
@@ -223,39 +247,25 @@ if __name__ == "__main__":
     parser.add_argument("--models", nargs="+", choices=["KNNRegression", "LightGBM", "ARIMA", "NaiveMovingAverage"],
         default=["NaiveMovingAverage"], help="Models to evaluate.")
     parser.add_argument("--runs", type=int, help="Runs per model; otherwise 1 for deterministic models and 10 for others.")
-    parser.add_argument("--exog_level", "--exog-level", choices=list(EXOG_LEVEL_CHOICES), default=None,
-                        help="Ladder level (default L0, which reproduces the paper baseline). "
-                             "Mutually exclusive with --use_covariates.")
-    parser.add_argument("--gpu", type=int, default=-1, help=GPU_HELP)
+    parser.add_argument("--exog_level", "--exog-level", choices=list(("L0", "COV")), default="COV",
+                        help="Covariate block: COV (day/hour + weather + price + static + state) or "
+                             "L0 (the paper's baseline).")
     parser.add_argument("--params_json", type=Path, default=None,
-                        help="Tuned parameters from scripts/tune_models.py (JSON).")
+                        help="Tuned parameters from scripts/tune_optuna.py.")
+    parser.add_argument("--gpu", type=int, default=-1, help=GPU_HELP)
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")
-    parser.add_argument("--use_covariates", "--use-covariates", action="store_true",
-                        help="Use every exogenous variable the dataset has, in one block, "
-                             "instead of one rung of the ladder (same as --exog_level ALL).")
     args = parser.parse_args()
-    # --use_covariates is a shorthand for --exog_level ALL, so the two must not
-    # disagree.  The level defaults to None so "not given" can be told apart
-    # from an explicit L0; a contradictory pair fails loudly instead of one
-    # silently winning and the results landing in the wrong tree.
-    if args.exog_level is None:
-        args.exog_level = COVARIATE_LEVEL if args.use_covariates else "L0"
-    elif args.use_covariates and args.exog_level != COVARIATE_LEVEL:
-        parser.error(
-            f"--use_covariates and --exog_level {args.exog_level} disagree; drop one "
-            "(--use_covariates is --exog_level ALL)"
-        )
     dataset = dataset_classes[args.dataset]()
-    params_override = load_best_params(args.params_json) if args.params_json else None
+    params_override = load_tuned_params(args.params_json)
     for sampling_rate in args.sampling_rates:
         for model_type in args.models:
-            if params_override and model_type != "LightGBM":
-                logging.warning("--params_json only applies to LightGBM, ignoring it for %s", model_type)
             n_runs = args.runs if args.runs is not None else (1 if model_type in deterministic_models else 10)
             for run_num in range(1, n_runs + 1):
                 try:
                     gc.collect()
-                    paper_forecasting_train(args.dataset, dataset, run_num, model_type, sampling_rate, args.gpu, args.results_dir, exog_level=args.exog_level, params_override=params_override if model_type == "LightGBM" else None)
+                    paper_forecasting_train(args.dataset, dataset, run_num, model_type, sampling_rate, args.gpu,
+                                            args.results_dir, level=args.exog_level,
+                                            params_override=params_override if model_type == "LightGBM" else None)
                     gc.collect()
                 except Exception as e:
                     logging.error(f"{model_type} Run {run_num} (Sampling {sampling_rate}) failed: {str(e)}", exc_info=True)

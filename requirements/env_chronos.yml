@@ -18,4 +18,7 @@ dependencies:
     - accelerate>=1.1,<2
     - chronos-forecasting==2.3.1
     - einops>=0.7,<1
+    # Timestral is not on PyPI; the inference package is installed from source.
+    # It needs python >= 3.10 and torch >= 2.4, both satisfied by this env.
+    - git+https://github.com/mistralai/timestral
     - transformers>=4.41,<6

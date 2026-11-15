@@ -2,7 +2,8 @@
 
 plan_updated.md section 5 fixes the contract:
 
-* one shared validation block of 14 days immediately before the test window;
+* the dataset's own validation block -- 14 days, 28 on Zonnedael -- sitting
+  immediately before the test window;
 * the metric is MAE, because MAE is the table's metric;
 * at most 30 trials and 3 hours per model, whichever comes first, with Optuna's
   median pruner and an SQLite study so a Kaggle session can be resumed;
@@ -28,9 +29,10 @@ from utils.protocol import (
     PROJECT_ROOT,
     TUNING_MAX_HOURS,
     TUNING_MAX_TRIALS,
-    TUNING_VALIDATION_DAYS,
     horizon_for,
+    points_per_day,
     sampling_tag,
+    validation_days as protocol_validation_days,
     validation_windows,
 )
 
@@ -166,7 +168,7 @@ class TuningCell:
     epochs: int = 100
     seed: int = 0
     gpu: int = -1
-    validation_days: int = TUNING_VALIDATION_DAYS
+    validation_days: Optional[int] = None
     max_trials: int = TUNING_MAX_TRIALS
     max_hours: float = TUNING_MAX_HOURS
     output_dir: Optional[Path] = None
@@ -177,10 +179,25 @@ class TuningCell:
                 f"{self.model!r} is not tuned: plan_updated.md section 4 keeps "
                 f"Chronos-2 and Timestral zero-shot. Tuned models: {TUNED_MODELS}"
             )
+        # 14 days on Belgium/Germany/London, 28 on Zonnedael: the block is the
+        # one reserved by data/README.md, never a flat default.
+
+    @property
+    def validation_days_used(self) -> int:
+        """Days of the validation block: the override, else the dataset's own."""
+        if self.validation_days is None:
+            return int(protocol_validation_days(self.dataset))
+        return int(self.validation_days)
 
     @property
     def horizon(self) -> int:
-        return horizon_for(self.sampling)
+        """Points of the test block at this sampling rate (192 on 15-min data)."""
+        return horizon_for(self.sampling, self.dataset)
+
+    @property
+    def per_day(self) -> int:
+        """Points in one day of the validation block after subsampling."""
+        return points_per_day(self.dataset, self.sampling)
 
     @property
     def directory(self) -> Path:
@@ -287,7 +304,7 @@ def save_result(cell: TuningCell, study, hours_used: float,
         "level": cell.level,
         "sampling": float(cell.sampling),
         "horizon": cell.horizon,
-        "validation_days": int(cell.validation_days),
+        "validation_days": int(cell.validation_days_used),
         "budget": {"max_trials": int(cell.max_trials), "max_hours": float(cell.max_hours)},
         "used": {"trials": len(study.trials), "hours": round(float(hours_used), 4)},
         "best_value": float(study.best_value),
@@ -297,7 +314,7 @@ def save_result(cell: TuningCell, study, hours_used: float,
         "saturated": is_saturated(best_value_curve(study)),
         "trials": trial_table(study),
         "strategy": "B: trainable models tuned with one shared budget; TSFM zero-shot",
-        "selection_metric": "MAE on the 14-day validation block before the test window",
+        "selection_metric": "MAE on the validation block before the test window",
     }
     if extra:
         payload.update(extra)
@@ -371,9 +388,9 @@ def neuralforecast_windows_mae(model_class, params: Dict[str, object], frame,
     """MAE of one (or more) validation window for a NeuralForecast model.
 
     Each window costs a full fit, so the default uses the first window only: the
-    budget in section 5 is per model, not per window, and a single 192-step
-    window already matches the test metric length.  ``windows_to_use`` can be
-    raised when the budget allows it.
+    budget in section 5 is per model, not per window, and a single window as long
+    as the test block already matches the test metric length.  ``windows_to_use``
+    can be raised when the budget allows it.
     """
     from neuralforecast import NeuralForecast
     from utils.device import lightning_device_config

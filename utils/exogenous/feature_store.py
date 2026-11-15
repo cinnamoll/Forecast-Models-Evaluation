@@ -157,12 +157,10 @@ def build_exogenous_feature_dataframe(
         answered by the TimeSHAP elimination, not by fixed rungs.
     """
     if exog_level not in SUPPORTED_EXOG_LEVELS and exog_level != ALL_COVARIATES_LEVEL:
-        from utils.protocol import BLOCKS_ONLY_IN_ALL, REMOVED_BLOCKS
+        from utils.protocol import BLOCKS_ONLY_IN_ALL
 
         block = BLOCKS_ONLY_IN_ALL.get(exog_level)
-        removed = REMOVED_BLOCKS.get(exog_level)
-        detail = (f" It is a block inside ALL: {block}." if block else "") + \
-                 (f" It was removed: {removed}." if removed else "")
+        detail = (f" It is a block inside ALL: {block}." if block else "") 
         raise ValueError(
             f"Unsupported exog_level {exog_level!r}.{detail}"
             f" Known: {SUPPORTED_EXOG_LEVELS + (ALL_COVARIATES_LEVEL,)}"

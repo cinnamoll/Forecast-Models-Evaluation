@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from utils.benchmark_series import SERIES_ORDER, display_name
-from utils.protocol import PROJECT_ROOT, RUN_LEVELS, sampling_tag
+from utils.protocol import PROJECT_ROOT, sampling_tag
 
 _RUN_DIR = re.compile(r"^(?:Run_(?P<run>\d+)|Epochs_(?P<epochs>\d+)_(?P<run_e>\d+))$")
 
@@ -224,7 +224,7 @@ def load_losses(
 
 def ablation_table(root, models: Iterable[str], dataset: str, sampling: float,
                    series_id: str,
-                   levels: Sequence[str] = RUN_LEVELS) -> pd.DataFrame:
+                   levels: Sequence[str] = ("L0", "ALL")) -> pd.DataFrame:
     """MAE per level for the ablation, one row per level that has results."""
     rows = []
     for model in models:

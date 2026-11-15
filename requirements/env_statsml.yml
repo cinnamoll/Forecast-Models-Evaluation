@@ -6,12 +6,10 @@ dependencies:
   - lightgbm>=4,<5
   - matplotlib
   - numpy>=1.21,<2
+  - optuna
   - pandas
   - pmdarima>2.1
   - scikit-learn
   - scipy
   - seaborn
-  # Hyper-parameter search (plan_updated.md section 5: Optuna, median pruning,
-  # SQLite storage).  Imported lazily by utils/tuning.py.
-  - optuna>=3.6,<5
   - pip

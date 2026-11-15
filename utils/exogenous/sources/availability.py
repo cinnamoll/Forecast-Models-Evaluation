@@ -83,13 +83,6 @@ def report(dataset_name, entity_id, start, end):
     }
 
 
-def removed_blocks():
-    """Blocks that were taken out of the pipeline, with the reason."""
-    from utils.protocol import REMOVED_BLOCKS
-
-    return dict(REMOVED_BLOCKS)
-
-
 def missing_blocks(dataset_name, entity_id, start, end):
     return {name: detail for name, (ok, detail)
             in report(dataset_name, entity_id, start, end).items() if not ok}
