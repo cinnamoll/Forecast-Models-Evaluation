@@ -1,0 +1,45 @@
+2026-11-16 15:59:46,217 - INFO - Logger initialized at results_covariate_pre_tune/results_belgium/LightGBM/Sampling_33/COV/Run_1/training_log.txt
+2026-11-16 15:59:46,217 - INFO - Run 1: Start training LightGBM models (covariate level COV)...
+2026-11-16 15:59:46,296 - INFO - Run 1 - pv_house_1 - LightGBM
+2026-11-16 15:59:46,296 - INFO - Using random seed: 3818224281
+2026-11-16 15:59:46,298 - INFO - lagged 7 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 15:59:46,298 - INFO - Training LightGBM model for pv_house_1 on 2848 samples (33.33% of original data)...
+2026-11-16 15:59:48,781 - INFO - pv_house_1 (LightGBM) - MAE: 0.0701, RMSE: 0.1228
+2026-11-16 15:59:49,107 - INFO - Run 1 - pv_house_2 - LightGBM
+2026-11-16 15:59:49,107 - INFO - Using random seed: 3818227092
+2026-11-16 15:59:49,109 - INFO - lagged 7 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 15:59:49,109 - INFO - Training LightGBM model for pv_house_2 on 2848 samples (33.33% of original data)...
+2026-11-16 15:59:51,330 - INFO - pv_house_2 (LightGBM) - MAE: 0.0774, RMSE: 0.1342
+2026-11-16 15:59:51,493 - INFO - Run 1 - pv_house_3 - LightGBM
+2026-11-16 15:59:51,493 - INFO - Using random seed: 3818229478
+2026-11-16 15:59:51,494 - INFO - lagged 7 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 15:59:51,495 - INFO - Training LightGBM model for pv_house_3 on 2848 samples (33.33% of original data)...
+2026-11-16 15:59:53,179 - INFO - pv_house_3 (LightGBM) - MAE: 0.0767, RMSE: 0.1287
+2026-11-16 15:59:53,365 - INFO - Run 1 - pv_house_4 - LightGBM
+2026-11-16 15:59:53,365 - INFO - Using random seed: 3818231350
+2026-11-16 15:59:53,367 - INFO - lagged 7 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 15:59:53,367 - INFO - Training LightGBM model for pv_house_4 on 2848 samples (33.33% of original data)...
+2026-11-16 15:59:56,979 - INFO - pv_house_4 (LightGBM) - MAE: 0.0765, RMSE: 0.1354
+2026-11-16 15:59:57,234 - INFO - Run 1 - bess_house_1 - LightGBM
+2026-11-16 15:59:57,234 - INFO - Using random seed: 3818235218
+2026-11-16 15:59:57,235 - INFO - lagged 8 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation, soc
+2026-11-16 15:59:57,236 - INFO - Training LightGBM model for bess_house_1 on 2837 samples (33.33% of original data)...
+2026-11-16 15:59:58,559 - INFO - bess_house_1 (LightGBM) - MAE: 0.0759, RMSE: 0.1100
+2026-11-16 15:59:58,740 - INFO - Run 1 - bess_house_2 - LightGBM
+2026-11-16 15:59:58,740 - INFO - Using random seed: 3818236725
+2026-11-16 15:59:58,742 - INFO - lagged 8 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation, soc
+2026-11-16 15:59:58,742 - INFO - Training LightGBM model for bess_house_2 on 2837 samples (33.33% of original data)...
+2026-11-16 16:00:00,165 - INFO - bess_house_2 (LightGBM) - MAE: 0.1357, RMSE: 0.1850
+2026-11-16 16:00:00,338 - INFO - Run 1 - bess_house_3 - LightGBM
+2026-11-16 16:00:00,338 - INFO - Using random seed: 3818238323
+2026-11-16 16:00:00,340 - INFO - lagged 8 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation, soc
+2026-11-16 16:00:00,341 - INFO - Training LightGBM model for bess_house_3 on 2837 samples (33.33% of original data)...
+2026-11-16 16:00:00,762 - INFO - bess_house_3 (LightGBM) - MAE: 0.1045, RMSE: 0.1409
+2026-11-16 16:00:00,941 - INFO - Run 1 - bess_house_4 - LightGBM
+2026-11-16 16:00:00,941 - INFO - Using random seed: 3818238926
+2026-11-16 16:00:00,943 - INFO - lagged 8 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation, soc
+2026-11-16 16:00:00,943 - INFO - Training LightGBM model for bess_house_4 on 2816 samples (33.33% of original data)...
+2026-11-16 16:00:01,711 - INFO - bess_house_4 (LightGBM) - MAE: 0.0747, RMSE: 0.1187
+2026-11-16 16:00:01,806 - INFO - Saved model metrics to results_covariate_pre_tune/results_belgium/LightGBM/Sampling_33/COV/Run_1/model_metrics_summary.csv
+2026-11-16 16:00:02,023 - INFO - Run 1: End training LightGBM models.
+2026-11-16 16:00:02,023 - INFO - Training completed in 15.81 seconds.

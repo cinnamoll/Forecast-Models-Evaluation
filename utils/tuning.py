@@ -27,8 +27,8 @@ import numpy as np
 
 from utils.protocol import (
     PROJECT_ROOT,
-    TUNING_MAX_HOURS,
-    TUNING_MAX_TRIALS,
+    3,
+    30,
     horizon_for,
     points_per_day,
     sampling_tag,
@@ -169,8 +169,8 @@ class TuningCell:
     seed: int = 0
     gpu: int = -1
     validation_days: Optional[int] = None
-    max_trials: int = TUNING_MAX_TRIALS
-    max_hours: float = TUNING_MAX_HOURS
+    max_trials: int = 30
+    max_hours: float = 3
     output_dir: Optional[Path] = None
 
     def __post_init__(self):

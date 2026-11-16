@@ -1,0 +1,20 @@
+2026-11-16 16:07:33,861 - INFO - Logger initialized at results_covariate_pre_tune/results_zonnedael/LightGBM/Sampling_50/COV/Run_1/training_log.txt
+2026-11-16 16:07:33,861 - INFO - Run 1: Start training LightGBM models (covariate level COV)...
+2026-11-16 16:07:34,010 - INFO - Run 1 - zonnedael_customer_8 - LightGBM
+2026-11-16 16:07:34,011 - INFO - Using random seed: 3818691995
+2026-11-16 16:07:34,012 - INFO - lagged 7 past-only covariate(s) by 96 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 16:07:34,013 - INFO - Training LightGBM model for zonnedael_customer_8 on 8592 samples (50.0% of original data)...
+2026-11-16 16:07:45,248 - INFO - zonnedael_customer_8 (LightGBM) - MAE: 0.0637, RMSE: 0.1097
+2026-11-16 16:07:45,689 - INFO - Run 1 - zonnedael_customer_9 - LightGBM
+2026-11-16 16:07:45,689 - INFO - Using random seed: 3818703674
+2026-11-16 16:07:45,691 - INFO - lagged 7 past-only covariate(s) by 96 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 16:07:45,691 - INFO - Training LightGBM model for zonnedael_customer_9 on 8592 samples (50.0% of original data)...
+2026-11-16 16:07:47,211 - INFO - zonnedael_customer_9 (LightGBM) - MAE: 0.0540, RMSE: 0.0773
+2026-11-16 16:07:47,451 - INFO - Run 1 - zonnedael_customer_43 - LightGBM
+2026-11-16 16:07:47,451 - INFO - Using random seed: 3818705436
+2026-11-16 16:07:47,453 - INFO - lagged 7 past-only covariate(s) by 96 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 16:07:47,453 - INFO - Training LightGBM model for zonnedael_customer_43 on 8592 samples (50.0% of original data)...
+2026-11-16 16:07:48,160 - INFO - zonnedael_customer_43 (LightGBM) - MAE: 0.0444, RMSE: 0.0782
+2026-11-16 16:07:48,270 - INFO - Saved model metrics to results_covariate_pre_tune/results_zonnedael/LightGBM/Sampling_50/COV/Run_1/model_metrics_summary.csv
+2026-11-16 16:07:48,435 - INFO - Run 1: End training LightGBM models.
+2026-11-16 16:07:48,435 - INFO - Training completed in 14.57 seconds.

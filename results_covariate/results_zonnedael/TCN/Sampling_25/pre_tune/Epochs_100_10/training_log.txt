@@ -1,0 +1,21 @@
+2026-11-15 22:47:17,850 - INFO - Logger initialized at results_covariate_pre_tune/results_zonnedael/TCN/Sampling_25/COV/Epochs_100_10/training_log.txt
+2026-11-15 22:47:17,850 - INFO - ...Start training for 100 epochs using TCN (covariate level COV)...
+2026-11-15 22:47:17,850 - INFO - Training Zonnedael customer models
+2026-11-15 22:47:17,932 - INFO - Using random seed: 1794757637
+2026-11-15 22:47:17,933 - INFO - TCN covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 5}
+2026-11-15 22:47:17,940 - INFO - Training TCN zonnedael_customer_8 model on 4296 samples (25.0% of original training set)...
+2026-11-15 22:47:17,940 - INFO - TCN receptive field: 32 steps (horizon 48)
+2026-11-15 22:47:20,207 - INFO - zonnedael_customer_8 - MAE: 0.0440, RMSE: 0.0960
+2026-11-15 22:47:20,412 - INFO - Using random seed: 1794757640
+2026-11-15 22:47:20,414 - INFO - TCN covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 5}
+2026-11-15 22:47:20,421 - INFO - Training TCN zonnedael_customer_9 model on 4296 samples (25.0% of original training set)...
+2026-11-15 22:47:20,421 - INFO - TCN receptive field: 32 steps (horizon 48)
+2026-11-15 22:47:22,685 - INFO - zonnedael_customer_9 - MAE: 0.0470, RMSE: 0.1009
+2026-11-15 22:47:22,903 - INFO - Using random seed: 1794757642
+2026-11-15 22:47:22,905 - INFO - TCN covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 5}
+2026-11-15 22:47:22,914 - INFO - Training TCN zonnedael_customer_43 model on 4296 samples (25.0% of original training set)...
+2026-11-15 22:47:22,914 - INFO - TCN receptive field: 32 steps (horizon 48)
+2026-11-15 22:47:25,159 - INFO - zonnedael_customer_43 - MAE: 0.0373, RMSE: 0.0589
+2026-11-15 22:47:25,294 - INFO - Saved model metrics to results_covariate_pre_tune/results_zonnedael/TCN/Sampling_25/COV/Epochs_100_10/model_metrics_summary.csv
+2026-11-15 22:47:25,451 - INFO - ...End training...
+2026-11-15 22:47:25,451 - INFO - Training completed in 7.60 seconds.

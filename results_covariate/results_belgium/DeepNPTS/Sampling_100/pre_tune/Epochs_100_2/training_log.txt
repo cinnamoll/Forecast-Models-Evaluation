@@ -1,0 +1,39 @@
+2026-11-15 23:05:01,023 - INFO - Logger initialized at results_covariate_pre_tune/results_belgium/DeepNPTS/Sampling_100/COV/Epochs_100_2/training_log.txt
+2026-11-15 23:05:01,023 - INFO - ...Start training for 100 epochs using DeepNPTS (covariate level COV)...
+2026-11-15 23:05:01,023 - INFO - Training PV models
+2026-11-15 23:05:01,049 - INFO - Using random seed: 1794758701
+2026-11-15 23:05:01,051 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:01,061 - INFO - Training DeepNPTS PV_house_1 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:06,764 - INFO - PV_house_1 - MAE: 0.0790, RMSE: 0.1021
+2026-11-15 23:05:06,930 - INFO - Using random seed: 1794758706
+2026-11-15 23:05:06,931 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:06,942 - INFO - Training DeepNPTS PV_house_2 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:12,652 - INFO - PV_house_2 - MAE: 0.0823, RMSE: 0.1004
+2026-11-15 23:05:12,817 - INFO - Using random seed: 1794758712
+2026-11-15 23:05:12,819 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:12,828 - INFO - Training DeepNPTS PV_house_3 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:18,510 - INFO - PV_house_3 - MAE: 0.0813, RMSE: 0.1021
+2026-11-15 23:05:18,721 - INFO - Using random seed: 1794758718
+2026-11-15 23:05:18,722 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:18,734 - INFO - Training DeepNPTS PV_house_4 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:24,433 - INFO - PV_house_4 - MAE: 0.0787, RMSE: 0.0998
+2026-11-15 23:05:24,561 - INFO - Training BESS models
+2026-11-15 23:05:24,591 - INFO - Using random seed: 1794758724
+2026-11-15 23:05:24,592 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:24,601 - INFO - Training DeepNPTS BESS_house_1 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:30,341 - INFO - BESS_house_1 - MAE: 0.0702, RMSE: 0.1229
+2026-11-15 23:05:30,505 - INFO - Using random seed: 1794758730
+2026-11-15 23:05:30,507 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:30,519 - INFO - Training DeepNPTS BESS_house_2 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:36,362 - INFO - BESS_house_2 - MAE: 0.1559, RMSE: 0.2058
+2026-11-15 23:05:36,528 - INFO - Using random seed: 1794758736
+2026-11-15 23:05:36,529 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:36,541 - INFO - Training DeepNPTS BESS_house_3 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:42,320 - INFO - BESS_house_3 - MAE: 0.1383, RMSE: 0.2153
+2026-11-15 23:05:42,479 - INFO - Using random seed: 1794758742
+2026-11-15 23:05:42,480 - INFO - DeepNPTS covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 23:05:42,492 - INFO - Training DeepNPTS BESS_house_4 model on 8544 samples (100.0% of original training set)...
+2026-11-15 23:05:48,269 - INFO - BESS_house_4 - MAE: 0.0456, RMSE: 0.1094
+2026-11-15 23:05:48,391 - INFO - Saved model metrics to results_covariate_pre_tune/results_belgium/DeepNPTS/Sampling_100/COV/Epochs_100_2/model_metrics_summary.csv
+2026-11-15 23:05:48,665 - INFO - ...End training...
+2026-11-15 23:05:48,665 - INFO - Training completed in 47.64 seconds.

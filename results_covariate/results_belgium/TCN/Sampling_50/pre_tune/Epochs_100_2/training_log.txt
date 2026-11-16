@@ -1,0 +1,47 @@
+2026-11-15 22:19:44,985 - INFO - Logger initialized at results_covariate_pre_tune/results_belgium/TCN/Sampling_50/COV/Epochs_100_2/training_log.txt
+2026-11-15 22:19:44,985 - INFO - ...Start training for 100 epochs using TCN (covariate level COV)...
+2026-11-15 22:19:44,985 - INFO - Training PV models
+2026-11-15 22:19:45,016 - INFO - Using random seed: 1794755985
+2026-11-15 22:19:45,018 - INFO - TCN covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:19:45,029 - INFO - Training TCN PV_house_1 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:19:45,030 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:19:48,037 - INFO - PV_house_1 - MAE: 0.0897, RMSE: 0.1370
+2026-11-15 22:19:48,215 - INFO - Using random seed: 1794755988
+2026-11-15 22:19:48,216 - INFO - TCN covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:19:48,230 - INFO - Training TCN PV_house_2 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:19:48,230 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:19:51,196 - INFO - PV_house_2 - MAE: 0.0867, RMSE: 0.1438
+2026-11-15 22:19:51,354 - INFO - Using random seed: 1794755991
+2026-11-15 22:19:51,356 - INFO - TCN covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:19:51,368 - INFO - Training TCN PV_house_3 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:19:51,368 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:19:54,302 - INFO - PV_house_3 - MAE: 0.0655, RMSE: 0.1119
+2026-11-15 22:19:54,468 - INFO - Using random seed: 1794755994
+2026-11-15 22:19:54,470 - INFO - TCN covariate lists: {'hist_exog_list': 7, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:19:54,482 - INFO - Training TCN PV_house_4 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:19:54,482 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:19:57,417 - INFO - PV_house_4 - MAE: 0.0528, RMSE: 0.0973
+2026-11-15 22:19:57,552 - INFO - Training BESS models
+2026-11-15 22:19:57,593 - INFO - Using random seed: 1794755997
+2026-11-15 22:19:57,595 - INFO - TCN covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:19:57,606 - INFO - Training TCN BESS_house_1 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:19:57,606 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:20:00,547 - INFO - BESS_house_1 - MAE: 0.0676, RMSE: 0.1226
+2026-11-15 22:20:00,744 - INFO - Using random seed: 1794756000
+2026-11-15 22:20:00,746 - INFO - TCN covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:20:00,756 - INFO - Training TCN BESS_house_2 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:20:00,756 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:20:03,686 - INFO - BESS_house_2 - MAE: 0.1324, RMSE: 0.1822
+2026-11-15 22:20:03,860 - INFO - Using random seed: 1794756003
+2026-11-15 22:20:03,862 - INFO - TCN covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:20:03,875 - INFO - Training TCN BESS_house_3 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:20:03,875 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:20:06,830 - INFO - BESS_house_3 - MAE: 0.1068, RMSE: 0.1649
+2026-11-15 22:20:06,994 - INFO - Using random seed: 1794756006
+2026-11-15 22:20:06,996 - INFO - TCN covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-15 22:20:07,007 - INFO - Training TCN BESS_house_4 model on 4272 samples (50.0% of original training set)...
+2026-11-15 22:20:07,007 - INFO - TCN receptive field: 32 steps (horizon 96)
+2026-11-15 22:20:09,944 - INFO - BESS_house_4 - MAE: 0.0503, RMSE: 0.1027
+2026-11-15 22:20:10,091 - INFO - Saved model metrics to results_covariate_pre_tune/results_belgium/TCN/Sampling_50/COV/Epochs_100_2/model_metrics_summary.csv
+2026-11-15 22:20:10,342 - INFO - ...End training...
+2026-11-15 22:20:10,342 - INFO - Training completed in 25.36 seconds.

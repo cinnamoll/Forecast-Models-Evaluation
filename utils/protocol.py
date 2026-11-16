@@ -50,11 +50,7 @@ DEFAULT_RUNS = {"deep": 10, "deterministic": 1}
 #: Models whose result is a single number (no seed spread).
 DETERMINISTIC_MODELS = ("LightGBM", "Chronos2", "Timestral")
 
-TUNING_VALIDATION_DAYS = 14
-TUNING_MAX_TRIALS = 30
-TUNING_MAX_HOURS = 3.0
-
-MODEL_ORDER = ("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT", "Chronos2", "Timestral")
+MODEL_ORDER = ("LightGBM", "DeepNPTS", "TCN", "TFT", "Chronos2", "Timestral")
 
 #: Two covariate configurations.  ``L0`` is the paper's baseline (quarter_hour
 #: and is_weekend only, as ``utils/dataset_config.py`` builds them) and exists so
@@ -133,14 +129,14 @@ def run_dir(root, dataset: str, model: str, sampling_rate: float, run: int = 1,
     return base / f"Run_{run}"
 
 
-def validation_bounds(test_start, days: int = TUNING_VALIDATION_DAYS):
+def validation_bounds(test_start, days: int = 14):
     """The ``days``-day block that ends exactly where the test window starts."""
     test_start = pd.Timestamp(test_start)
     return test_start - pd.Timedelta(days=days), test_start
 
 
 def validation_windows(n_points: int, horizon: int, steps_per_day_: int,
-                       days: int = TUNING_VALIDATION_DAYS) -> list[tuple[int, int]]:
+                       days: int = 14) -> list[tuple[int, int]]:
     """Consecutive ``horizon``-long windows inside the tuning block.
 
     Returns ``[(train_end, eval_end)]``; rows ``< train_end`` are the only ones a

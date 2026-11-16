@@ -33,13 +33,21 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from neuralforecast import NeuralForecast
+import mxnet as mx
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.covariates import roles_for, shift_past_only
-from utils.protocol import TUNING_MAX_HOURS, TUNING_MAX_TRIALS, TUNING_VALIDATION_DAYS, horizon_for, sampling_tag, steps_per_day, validation_windows
+from utils.protocol import horizon_for, sampling_tag, steps_per_day, validation_windows
+from utils.covariates import scale_covariates
+from utils.device import lightning_device_config
+from models.models_gluonts import to_gluonts_dataset, covariate_spec, split_params
+from gluonts.evaluation.backtest import make_evaluation_predictions
+from gluonts.mx.trainer import Trainer
+from utils.device import uses_gpu
 
 LOGGER = logging.getLogger("tune")
 
@@ -172,7 +180,7 @@ def load_frame(dataset: str, level: str):
     a search over four Belgian houses at once would spend the budget on the house
     the parameter set fits best.
     """
-    from utils.dataset_config import DatasetGermanyNF, DatasetLondonNF
+    from utils.dataset_config import DatasetGermanyNF, DatasetLondonNF, DatasetBelgiumNF
 
     if dataset == "london":
         frame = DatasetLondonNF().get_inputs_for_load(level=level)
@@ -180,6 +188,10 @@ def load_frame(dataset: str, level: str):
         start = pd.Timestamp("2024-01-01 00:00:00", tz="UTC")
         end = pd.Timestamp("2024-04-01 00:00:00", tz="UTC")
         frame = DatasetGermanyNF().get_inputs_for_load(start, end, level=level)
+    elif dataset == "belgium":
+        start = pd.Timestamp("2024-01-01 00:00:00", tz="UTC")
+        end = pd.Timestamp("2024-04-01 00:00:00", tz="UTC")
+        frame = DatasetBelgiumNF().get_inputs_for_pv(house=1, start_dt=start, end_dt=end, level=level)
     else:
         raise ValueError(f"{dataset!r} is not a tuning dataset; use london (LCL) or germany (WPuQ)")
     return frame.reset_index(drop=True)
@@ -208,11 +220,6 @@ def lightgbm_objective(params, X, y, windows, seed, trial=None):
 def neuralforecast_objective(model_class, params, frame, horizon, freq, windows, epochs,
                              seed, gpu, window=None):
     """MAE of the first validation window for a NeuralForecast model."""
-    from neuralforecast import NeuralForecast
-
-    from utils.covariates import scale_covariates
-    from utils.device import lightning_device_config
-
     train_end, eval_end = windows[0] if window is None else window
     window_frame = frame.iloc[:eval_end].reset_index(drop=True)
     feature_columns = [c for c in window_frame.columns if c not in ("unique_id", "ds", "y")]
@@ -251,14 +258,6 @@ def neuralforecast_objective(model_class, params, frame, horizon, freq, windows,
 
 def gluonts_objective(model_class, params, frame, horizon, freq, windows, epochs, seed, gpu):
     """MAE of the first validation window for the GluonTS TFT estimator."""
-    import mxnet as mx
-
-    from models.models_gluonts import to_gluonts_dataset, covariate_spec, split_params
-    from gluonts.evaluation.backtest import make_evaluation_predictions
-    from gluonts.mx.trainer import Trainer
-
-    from utils.device import uses_gpu
-
     train_end, eval_end = windows[0]
     window_frame = frame.iloc[:eval_end].reset_index(drop=True)
     feature_columns = [c for c in window_frame.columns if c not in ("unique_id", "ds", "y")]
@@ -338,7 +337,7 @@ def save_result(model: str, dataset: str, level: str, sampling: float, study,
         "boundary_hits": boundary_hits(model, search_params),
         "best_value_curve": best_value_curve(study),
         "saturated": is_saturated(best_value_curve(study)),
-        "selection_metric": f"MAE on the {TUNING_VALIDATION_DAYS}-day validation block before the test window",
+        "selection_metric": f"MAE on the {14}-day validation block before the test window",
         "strategy": "B: the five trainable models are tuned with one shared budget; the two TSFM stay zero-shot",
     }
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -362,13 +361,12 @@ def time_limit_callback(max_hours: float):
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Optuna search for one model (plan section 5).")
     parser.add_argument("--model", required=True, choices=list(TUNED_MODELS))
-    parser.add_argument("--dataset", required=True, choices=["london", "germany", "LCL", "WPuQ"],
-                        help="LCL and WPuQ are the tuning sets; their aliases are accepted.")
+    parser.add_argument("--dataset", required=True, choices=["london", "germany", "belgium"])
     parser.add_argument("--level", default="COV", choices=list(("L0", "COV")))
     parser.add_argument("--sampling", type=float, default=100.0)
     parser.add_argument("--epochs", type=int, default=100, help="Training steps for the neural models.")
-    parser.add_argument("--trials", type=int, default=TUNING_MAX_TRIALS)
-    parser.add_argument("--hours", type=float, default=TUNING_MAX_HOURS)
+    parser.add_argument("--trials", type=int, default=30)
+    parser.add_argument("--hours", type=float, default=3)
     parser.add_argument("--seed", type=int, default=0, help="Sampler seed and model seed.")
     parser.add_argument("--gpu", type=int, default=-1)
     parser.add_argument("--out-dir", type=Path, default=PROJECT_ROOT / "results" / "tuning")
@@ -381,7 +379,7 @@ def main(argv=None) -> int:
     horizon = horizon_for(args.sampling)
     per_day = steps_per_day(args.sampling, dataset)
     frame = load_frame(dataset, args.level)
-    windows = validation_windows(len(frame), horizon, per_day, TUNING_VALIDATION_DAYS)
+    windows = validation_windows(len(frame), horizon, per_day, 14)
     LOGGER.info("%s/%s: %d points, horizon %d, %d validation window(s) of %d steps",
                 args.model, dataset, len(frame), horizon, len(windows), horizon)
 
@@ -404,7 +402,7 @@ def main(argv=None) -> int:
             X = shift_past_only(X, roles, horizon)
         X = X.iloc[::int(round(100.0 / args.sampling))].reset_index(drop=True)
         y = y.iloc[::int(round(100.0 / args.sampling))].reset_index(drop=True)
-        windows = validation_windows(len(y), horizon, per_day, TUNING_VALIDATION_DAYS)
+        windows = validation_windows(len(y), horizon, per_day, 14)
 
         def objective(trial):
             params = SUGGESTERS["LightGBM"](trial)

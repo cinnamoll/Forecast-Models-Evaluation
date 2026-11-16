@@ -1,0 +1,10 @@
+2026-11-16 16:01:44,906 - INFO - Logger initialized at results_covariate_pre_tune/results_germany/LightGBM/Sampling_33/COV/Run_1/training_log.txt
+2026-11-16 16:01:44,906 - INFO - Run 1: Start training LightGBM models (covariate level COV)...
+2026-11-16 16:01:44,966 - INFO - Run 1 - germany_load - LightGBM
+2026-11-16 16:01:44,966 - INFO - Using random seed: 3818342951
+2026-11-16 16:01:44,968 - INFO - lagged 7 past-only covariate(s) by 64 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-16 16:01:44,968 - INFO - Training LightGBM model for germany_load on 2848 samples (33.33% of original data)...
+2026-11-16 16:01:45,348 - INFO - germany_load (LightGBM) - MAE: 0.0782, RMSE: 0.1635
+2026-11-16 16:01:45,600 - INFO - Saved model metrics to results_covariate_pre_tune/results_germany/LightGBM/Sampling_33/COV/Run_1/model_metrics_summary.csv
+2026-11-16 16:01:45,734 - INFO - Run 1: End training LightGBM models.
+2026-11-16 16:01:45,734 - INFO - Training completed in 0.83 seconds.

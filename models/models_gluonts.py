@@ -19,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from utils.metrics import calculate_metrics, forecast_plot_and_csv, plot_model_metrics
 from utils.dataset_config import DatasetBelgiumNF, DatasetGermanyNF, DatasetLondonNF, DatasetZonnedaelNF
-from utils.covariates import roles_for, scale_covariates
+from utils.covariates import calendar_frame, roles_for, scale_covariates
 from utils.device import GPU_HELP, uses_gpu
 from utils.protocol import horizon_for, run_dir
 from gluonts.mx.model.seq2seq import MQRNNEstimator
@@ -54,7 +54,7 @@ def setup_model_logger(save_dir):
     logging.info(f"Logger initialized at {log_file}")
 
 
-def covariate_spec(y_df, roles, level, train_end):
+def covariate_spec(frame, roles, level, train_end):
     """Per-column dataset fields and the estimator kwargs describing them.
 
     GluonTS's temporal fusion transformer does not take one covariate matrix: it
@@ -64,12 +64,21 @@ def covariate_spec(y_df, roles, level, train_end):
     named in ``past_dynamic_features``, which makes the instance splitter cut
     their future part — that is the only way the model can *see* weather without
     being handed weather inside the horizon.
+
+    ``frame`` decides the length of every field: the estimator stacks these
+    arrays with its own time-feature block, which has one row per target point
+    (plus ``prediction_length`` at prediction time, see
+    :func:`extend_for_horizon`).  Pass exactly the rows of the entry the arrays
+    are going into — the training frame for the training entry, the full frame
+    for the prediction entry — or the stack fails on a length mismatch.
+    ``train_end`` is the number of leading rows the scaling may look at, so both
+    entries are scaled with the training bounds.
     """
-    feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
+    feature_columns = [c for c in frame.columns if c not in ("unique_id", "ds", "y")]
     if level == "L0" or not feature_columns:
         return {}, {}
 
-    scaled = scale_covariates(y_df[feature_columns], roles, train_end=train_end)
+    scaled = scale_covariates(frame[feature_columns], roles, train_end=train_end)
     entry, kwargs = {}, {}
     dynamic_dims, dynamic_cards = {}, {}
     static_dims, static_cards = {}, {}
@@ -111,6 +120,45 @@ def covariate_spec(y_df, roles, level, train_end):
         # pops them out of that dict to build the past-only channel.
         kwargs["past_dynamic_features"] = list(roles["past_only"])
     return entry, kwargs
+
+
+def extend_for_horizon(entry, roles, last_stamp, freq, steps):
+    """Append the horizon block GluonTS expects on a prediction entry.
+
+    ``AddTimeFeatures`` builds its block over ``len(target) + prediction_length``
+    when a predictor sees a test entry (``is_train=False``), and ``VstackFeatures``
+    stacks the user's dynamic fields with it — so every dynamic array handed to
+    the predictor has to carry ``prediction_length`` extra rows.  The TFT
+    instance splitter reads those rows as the known-future part of the window.
+
+    Calendar columns are recomputed for the real future stamps, which is what
+    "known in advance" means and is causal.  Everything else — measured weather,
+    state of charge, the day-ahead price, which the release only ships
+    historically — holds its last observed value: for a past-only field that
+    block is never read (the splitter cuts it at the origin), and for the price
+    it is a persistence assumption inside the horizon, logged by the caller.
+    """
+    if steps <= 0 or not entry:
+        return entry
+    future_index = pd.date_range(pd.Timestamp(last_stamp), periods=steps + 1, freq=freq)[1:]
+    calendar = calendar_frame(future_index)
+    extended = dict(entry)
+    held = []
+    for column, values in entry.items():
+        if column in roles["static"]:
+            # Static fields are one value per entity and are never indexed by time.
+            continue
+        values = np.asarray(values)
+        if column in calendar.columns:
+            tail = calendar[column].to_numpy(dtype=values.dtype)
+        else:
+            tail = np.repeat(values[..., -1:], steps, axis=-1)
+            held.append(column)
+        extended[column] = np.concatenate([values, tail], axis=-1)
+    if held:
+        logging.info("Horizon block of the prediction entry holds the last observed value of %s",
+                     sorted(held))
+    return extended
 
 
 def to_gluonts_dataset(df, freq, start, entry_extra=None):
@@ -155,7 +203,17 @@ def train_gluonts_model(y_df, model_name, save_dir, model_class, sampling_rate, 
     feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
     roles = roles_for(y_df[feature_columns]) if feature_columns else {
         "known_future": [], "past_only": [], "static": [], "categorical": []}
-    entry_extra, covariate_kwargs = covariate_spec(y_df, roles, level, train_end=len(train_df))
+    # The training entry ends at the forecast origin, so its covariate arrays must
+    # end there too: the estimator stacks them with a time-feature block of
+    # ``len(past_target)`` rows and refuses to stack arrays of two lengths.
+    train_entry_extra, covariate_kwargs = covariate_spec(
+        train_df, roles, level, train_end=len(train_df))
+    # The prediction entry keeps the whole series and needs the horizon block on
+    # top of it (``len(target) + prediction_length``); both entries are scaled
+    # with the training bounds.
+    test_entry_extra = extend_for_horizon(
+        covariate_spec(y_df, roles, level, train_end=len(train_df))[0],
+        roles, y_df["ds"].iloc[-1], freq, forecast_horizon)
     if level == "L0":
         logging.info("%s receives no covariates at L0 (paper baseline)", model_name)
     else:
@@ -165,8 +223,8 @@ def train_gluonts_model(y_df, model_name, save_dir, model_class, sampling_rate, 
             len(roles["static"]), len(roles["categorical"]),
         )
 
-    train_ds = to_gluonts_dataset(train_df, freq, start_idx, entry_extra)
-    test_ds = to_gluonts_dataset(y_df, freq, start_idx, entry_extra)
+    train_ds = to_gluonts_dataset(train_df, freq, start_idx, train_entry_extra)
+    test_ds = to_gluonts_dataset(y_df, freq, start_idx, test_entry_extra)
 
     estimator_kwargs, trainer_kwargs, ignored = split_params(model_class, params_override)
     if ignored:
@@ -190,9 +248,11 @@ def train_gluonts_model(y_df, model_name, save_dir, model_class, sampling_rate, 
     predictor = estimator.train(training_data=train_ds)
     forecast_it, _ = make_evaluation_predictions(dataset=test_ds, predictor=predictor, num_samples=100)
     forecasts = list(forecast_it)
-    # ``forecast.mean`` over a quantile forecast is the mean of the quantiles,
-    # not the median; that is what the published GluonTS numbers use and it is
-    # kept so the new cells join the old table.
+    # ``forecast.mean`` on a quantile forecast has no mean to return: GluonTS logs
+    # "the median is being returned instead" and hands back the p50 quantile.  That
+    # is what the published GluonTS numbers are (``QuantileForecastGenerator``), so
+    # it is kept so the new cells join the old table -- but it is a median, not a
+    # mean of the quantiles, and the log says so on every run.
     y_pred = forecasts[0].mean[:forecast_horizon]
     y_true = y_df["y"].values[-forecast_horizon:]
     mae, rmse = calculate_metrics(y_pred, y_true)
