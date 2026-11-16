@@ -19,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from utils.metrics import calculate_metrics, forecast_plot_and_csv, plot_model_metrics
 from utils.dataset_config import DatasetBelgiumNF, DatasetGermanyNF, DatasetLondonNF, DatasetZonnedaelNF
-from utils.covariates import calendar_frame, roles_for, scale_covariates
+from utils.covariates import roles_for, scale_covariates
 from utils.device import GPU_HELP, uses_gpu
 from utils.protocol import horizon_for, run_dir
 from gluonts.mx.model.seq2seq import MQRNNEstimator
@@ -66,11 +66,12 @@ def covariate_spec(frame, roles, level, train_end):
     being handed weather inside the horizon.
 
     ``frame`` decides the length of every field: the estimator stacks these
-    arrays with its own time-feature block, which has one row per target point
-    (plus ``prediction_length`` at prediction time, see
-    :func:`extend_for_horizon`).  Pass exactly the rows of the entry the arrays
-    are going into — the training frame for the training entry, the full frame
-    for the prediction entry — or the stack fails on a length mismatch.
+    arrays with its own time-feature block, whose length is the one of the target
+    the predictor is handed.  So pass the rows of that same entry — ``train_df``
+    for the training entry, ``y_df`` for the prediction entry — never a frame of
+    a different length.  (``make_evaluation_predictions`` truncates the target by
+    ``horizon`` before predicting and ``AddTimeFeatures`` adds it back, so the
+    prediction arrays are ``len(y_df)``, not ``len(y_df) + horizon``.)
     ``train_end`` is the number of leading rows the scaling may look at, so both
     entries are scaled with the training bounds.
     """
@@ -122,45 +123,6 @@ def covariate_spec(frame, roles, level, train_end):
     return entry, kwargs
 
 
-def extend_for_horizon(entry, roles, last_stamp, freq, steps):
-    """Append the horizon block GluonTS expects on a prediction entry.
-
-    ``AddTimeFeatures`` builds its block over ``len(target) + prediction_length``
-    when a predictor sees a test entry (``is_train=False``), and ``VstackFeatures``
-    stacks the user's dynamic fields with it — so every dynamic array handed to
-    the predictor has to carry ``prediction_length`` extra rows.  The TFT
-    instance splitter reads those rows as the known-future part of the window.
-
-    Calendar columns are recomputed for the real future stamps, which is what
-    "known in advance" means and is causal.  Everything else — measured weather,
-    state of charge, the day-ahead price, which the release only ships
-    historically — holds its last observed value: for a past-only field that
-    block is never read (the splitter cuts it at the origin), and for the price
-    it is a persistence assumption inside the horizon, logged by the caller.
-    """
-    if steps <= 0 or not entry:
-        return entry
-    future_index = pd.date_range(pd.Timestamp(last_stamp), periods=steps + 1, freq=freq)[1:]
-    calendar = calendar_frame(future_index)
-    extended = dict(entry)
-    held = []
-    for column, values in entry.items():
-        if column in roles["static"]:
-            # Static fields are one value per entity and are never indexed by time.
-            continue
-        values = np.asarray(values)
-        if column in calendar.columns:
-            tail = calendar[column].to_numpy(dtype=values.dtype)
-        else:
-            tail = np.repeat(values[..., -1:], steps, axis=-1)
-            held.append(column)
-        extended[column] = np.concatenate([values, tail], axis=-1)
-    if held:
-        logging.info("Horizon block of the prediction entry holds the last observed value of %s",
-                     sorted(held))
-    return extended
-
-
 def to_gluonts_dataset(df, freq, start, entry_extra=None):
     entry = {"start": start, "target": df["y"].to_numpy(dtype="float32")}
     if entry_extra:
@@ -208,12 +170,13 @@ def train_gluonts_model(y_df, model_name, save_dir, model_class, sampling_rate, 
     # ``len(past_target)`` rows and refuses to stack arrays of two lengths.
     train_entry_extra, covariate_kwargs = covariate_spec(
         train_df, roles, level, train_end=len(train_df))
-    # The prediction entry keeps the whole series and needs the horizon block on
-    # top of it (``len(target) + prediction_length``); both entries are scaled
-    # with the training bounds.
-    test_entry_extra = extend_for_horizon(
-        covariate_spec(y_df, roles, level, train_end=len(train_df))[0],
-        roles, y_df["ds"].iloc[-1], freq, forecast_horizon)
+    # The prediction entry keeps the whole series and needs NO horizon block.
+    # ``make_evaluation_predictions`` splits the series first: the target the
+    # predictor sees is the first ``len - horizon`` points, and ``AddTimeFeatures``
+    # (``is_train=False``) then builds ``len(target) + horizon`` rows — which is
+    # exactly ``len(y_df)``, the length of these arrays.  Padding them any further
+    # is what fails with "size N and size N+H" at predict time.
+    test_entry_extra, _ = covariate_spec(y_df, roles, level, train_end=len(train_df))
     if level == "L0":
         logging.info("%s receives no covariates at L0 (paper baseline)", model_name)
     else:
