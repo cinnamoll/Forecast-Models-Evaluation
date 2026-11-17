@@ -36,9 +36,8 @@ import pandas as pd
 from neuralforecast import NeuralForecast
 import mxnet as mx
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+if str(Path(__file__).resolve().parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from utils.covariates import roles_for, shift_past_only
 from utils.protocol import horizon_for, sampling_tag, steps_per_day, validation_windows
@@ -48,13 +47,6 @@ from models.models_gluonts import to_gluonts_dataset, covariate_spec, split_para
 from gluonts.evaluation.backtest import make_evaluation_predictions
 from gluonts.mx.trainer import Trainer
 from utils.device import uses_gpu
-
-LOGGER = logging.getLogger("tune")
-
-TUNED_MODELS = ("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT")
-
-#: dataset aliases used by the plan (LCL = London, WPuQ = the German house)
-DATASET_ALIASES = {"LCL": "london", "WPuQ": "germany"}
 
 
 # --------------------------------------------------------------------- spaces
@@ -360,7 +352,8 @@ def time_limit_callback(max_hours: float):
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Optuna search for one model (plan section 5).")
-    parser.add_argument("--model", required=True, choices=list(TUNED_MODELS))
+    parser.add_argument("--model", required=True,
+                        choices=list(("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT")))
     parser.add_argument("--dataset", required=True, choices=["london", "germany", "belgium"])
     parser.add_argument("--level", default="COV", choices=list(("L0", "COV")))
     parser.add_argument("--sampling", type=float, default=100.0)
@@ -369,19 +362,21 @@ def main(argv=None) -> int:
     parser.add_argument("--hours", type=float, default=3)
     parser.add_argument("--seed", type=int, default=0, help="Sampler seed and model seed.")
     parser.add_argument("--gpu", type=int, default=-1)
-    parser.add_argument("--out-dir", type=Path, default=PROJECT_ROOT / "results" / "tuning")
+    parser.add_argument("--out-dir", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "results" / "tuning")
     parser.add_argument("--print-space", action="store_true",
                         help="Sample one configuration and exit (no training).")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    dataset = DATASET_ALIASES[args.dataset] if args.dataset in DATASET_ALIASES else args.dataset
+    # LCL = London, WPuQ = the German house.
+    dataset = {"LCL": "london", "WPuQ": "germany"}.get(args.dataset) or args.dataset
     horizon = horizon_for(args.sampling)
     per_day = steps_per_day(args.sampling, dataset)
     frame = load_frame(dataset, args.level)
     windows = validation_windows(len(frame), horizon, per_day, 14)
-    LOGGER.info("%s/%s: %d points, horizon %d, %d validation window(s) of %d steps",
-                args.model, dataset, len(frame), horizon, len(windows), horizon)
+    logging.getLogger("tune").info("%s/%s: %d points, horizon %d, %d validation window(s) of %d steps",
+                                   args.model, dataset, len(frame), horizon, len(windows), horizon)
 
     if args.print_space:
         import optuna
@@ -430,7 +425,8 @@ def main(argv=None) -> int:
 
     remaining = max(0, int(args.trials) - len(study.trials))
     if remaining == 0:
-        LOGGER.warning("study already used its %d trials; writing the existing result", len(study.trials))
+        logging.getLogger("tune").warning(
+            "study already used its %d trials; writing the existing result", len(study.trials))
         hours_used = 0.0
     else:
         started = time.time()

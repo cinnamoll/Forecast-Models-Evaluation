@@ -1,0 +1,23 @@
+2026-11-17 23:43:34,651 - INFO - Logger initialized at results/results_belgium/Timestral/Sampling_25/Run_1/training_log.txt
+2026-11-17 23:43:34,651 - INFO - ...Start Timestral forecasting...
+2026-11-17 23:43:34,651 - INFO - Forecasting PV
+2026-11-17 23:43:34,686 - INFO - PV_house_1: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:43:37,301 - INFO - PV_house_1 - MAE: 0.0744, RMSE: 0.1314
+2026-11-17 23:43:37,894 - INFO - PV_house_2: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:43:42,449 - INFO - PV_house_2 - MAE: 0.0780, RMSE: 0.1388
+2026-11-17 23:43:42,717 - INFO - PV_house_3: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:43:46,694 - INFO - PV_house_3 - MAE: 0.0768, RMSE: 0.1376
+2026-11-17 23:43:46,831 - INFO - PV_house_4: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:43:48,644 - INFO - PV_house_4 - MAE: 0.0812, RMSE: 0.1455
+2026-11-17 23:43:48,796 - INFO - Forecasting BESS
+2026-11-17 23:43:48,811 - INFO - BESS_house_1: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:43:51,699 - INFO - BESS_house_1 - MAE: 0.0749, RMSE: 0.1282
+2026-11-17 23:43:52,036 - INFO - BESS_house_2: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:43:56,734 - INFO - BESS_house_2 - MAE: 0.1170, RMSE: 0.1590
+2026-11-17 23:43:56,878 - INFO - BESS_house_3: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:43:58,324 - INFO - BESS_house_3 - MAE: 0.1102, RMSE: 0.1665
+2026-11-17 23:43:58,448 - INFO - BESS_house_4: context=2136 steps, horizon=48, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:44:00,860 - INFO - BESS_house_4 - MAE: 0.0604, RMSE: 0.1088
+2026-11-17 23:44:00,996 - INFO - Saved model metrics to results/results_belgium/Timestral/Sampling_25/Run_1/model_metrics_summary.csv
+2026-11-17 23:44:01,450 - INFO - ...End Timestral forecasting...
+2026-11-17 23:44:01,450 - INFO - Forecasting completed in 26.80 seconds.

@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
 from pathlib import Path
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 def calculate_metrics(preds, actuals):
     preds = np.asarray(preds)
@@ -74,7 +73,7 @@ def plot_model_metrics(metrics, save_dir: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Recompute and plot forecast metrics from a result directory.")
     parser.add_argument("--directory", type=Path,
-        default=PROJECT_ROOT / "results/results_belgium/AutoARIMA/Sampling_100/Run_1",
+        default=Path(__file__).resolve().parents[1] / "results/results_belgium/AutoARIMA/Sampling_100/Run_1",
         help="Directory containing forecast CSV files.")
     parser.add_argument("--save_dir", type=Path, help="Output directory; otherwise the input directory.")
     parser.add_argument("--log_level", default="INFO", help="Logging level.")

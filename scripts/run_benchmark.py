@@ -26,24 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from utils.protocol import DATASET_WINDOWS, MODEL_ORDER,SAMPLING_RATES, runs_for, sampling_tag
-
-DATASETS = tuple(DATASET_WINDOWS)
-
-#: model -> (conda env, script, result-dir style, epochs, extra flags)
-SPECS = {
-    "LightGBM": {"env": "statsml", "script": "models/models_statsml.py", "style": "run",
-                 "flags": ["--models", "LightGBM"]},
-    "DeepNPTS": {"env": "neuralforecast", "script": "models/models_neuralforecast.py",
-                 "style": "epochs", "epochs": 100, "flags": ["--models", "DeepNPTS", "--epochs", "100"]},
-    "TCN": {"env": "neuralforecast", "script": "models/models_neuralforecast.py",
-            "style": "epochs", "epochs": 100, "flags": ["--models", "TCN", "--epochs", "100"]},
-    "TFT": {"env": "gluonts", "script": "models/models_gluonts.py",
-            "style": "epochs", "epochs": 100,
-            "flags": ["--models", "TemporalFusionTransformer", "--epochs", "100"]},
-    "Chronos2": {"env": "chronos", "script": "models/fmodel_chronos2.py", "style": "run", "flags": []},
-    "Timestral": {"env": "chronos", "script": "models/fmodel_timestral.py", "style": "run", "flags": []},
-}
+from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
 
 
 def cell_dir(dataset: str, model: str, sampling: float, level: str) -> Path:
@@ -63,7 +46,20 @@ def completed_runs(dataset: str, model: str, sampling: float, level: str) -> int
 
 
 def command_for(dataset: str, model: str, sampling: float, level: str) -> list[str]:
-    spec = SPECS[model]
+    # model -> (conda env, script, extra flags); the run is spawned in that env.
+    specs = {
+        "LightGBM": {"env": "statsml", "script": "models/models_statsml.py",
+                     "flags": ["--models", "LightGBM"]},
+        "DeepNPTS": {"env": "neuralforecast", "script": "models/models_neuralforecast.py",
+                     "flags": ["--models", "DeepNPTS", "--epochs", "100"]},
+        "TCN": {"env": "neuralforecast", "script": "models/models_neuralforecast.py",
+                "flags": ["--models", "TCN", "--epochs", "100"]},
+        "TFT": {"env": "gluonts", "script": "models/models_gluonts.py",
+                "flags": ["--models", "TemporalFusionTransformer", "--epochs", "100"]},
+        "Chronos2": {"env": "chronos", "script": "models/fmodel_chronos2.py", "flags": []},
+        "Timestral": {"env": "chronos", "script": "models/fmodel_timestral.py", "flags": []},
+    }
+    spec = specs[model]
     parts = ["conda", "run", "--no-capture-output", "-n", spec["env"], "python", spec["script"],
              "--dataset", dataset, "--sampling_rates", f"{sampling:g}",
              "--runs", str(runs_for(model)), "--exog_level", level]
@@ -75,10 +71,14 @@ def command_for(dataset: str, model: str, sampling: float, level: str) -> list[s
 
 
 def main(argv=None) -> int:
+    datasets = tuple(DATASET_WINDOWS)
+    model_order = ("LightGBM", "DeepNPTS", "TCN", "TFT", "Chronos2", "Timestral")
+    sampling_rates = (25.0, 100.0 / 3.0, 50.0, 100.0)
+
     parser = argparse.ArgumentParser(description="Run the covariate benchmark.")
-    parser.add_argument("--models", nargs="+", choices=list(MODEL_ORDER), default=list(MODEL_ORDER))
-    parser.add_argument("--datasets", nargs="+", choices=list(DATASETS), default=list(DATASETS))
-    parser.add_argument("--samplings", nargs="+", type=float, default=list(SAMPLING_RATES))
+    parser.add_argument("--models", nargs="+", choices=list(model_order), default=list(model_order))
+    parser.add_argument("--datasets", nargs="+", choices=list(datasets), default=list(datasets))
+    parser.add_argument("--samplings", nargs="+", type=float, default=list(sampling_rates))
     parser.add_argument("--level", choices=list(("L0", "COV")), default="COV")
     parser.add_argument("--dry-run", action="store_true", help="Print the commands, run nothing.")
     parser.add_argument("--force", action="store_true", help="Re-run cells that are complete.")

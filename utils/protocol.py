@@ -20,8 +20,6 @@ from pathlib import Path
 
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
 #: Evaluation window per dataset, exactly as ``data/README.md`` describes it.
 #: Belgium and WPuQ ship a three-month file (Jan-Mar 2024); LCL covers all of
 #: 2013 and Zonnedael January-June 2013.  ``end`` is exclusive.
@@ -41,25 +39,6 @@ DATASET_STEP_MINUTES = {
     "zonnedael": 15,
 }
 
-BASE_HORIZON_POINTS = 192
-PAPER_STEP_MINUTES = 15  # the paper's grid, used for every freq label
-
-SAMPLING_RATES = (25.0, 100.0 / 3.0, 50.0, 100.0)
-DEFAULT_RUNS = {"deep": 10, "deterministic": 1}
-
-#: Models whose result is a single number (no seed spread).
-DETERMINISTIC_MODELS = ("LightGBM", "Chronos2", "Timestral")
-
-MODEL_ORDER = ("LightGBM", "DeepNPTS", "TCN", "TFT", "Chronos2", "Timestral")
-
-#: Two covariate configurations.  ``L0`` is the paper's baseline (quarter_hour
-#: and is_weekend only, as ``utils/dataset_config.py`` builds them) and exists so
-#: the improvement can be measured against the published table.  ``COV`` is the
-#: improved run: the full day/hour block plus weather, price, static metadata and
-#: BESS state of charge where the dataset has them.
-EXOG_LEVELS = ("L0", "COV")
-COVARIATE_LEVEL = "COV"
-
 
 def window(dataset: str):
     """``(start, end)`` timestamps of a dataset's evaluation window."""
@@ -74,7 +53,7 @@ def step_minutes(sampling_rate: float) -> int:
 
 def horizon_for(sampling_rate: float) -> int:
     """Horizon in points: 192 at 100 %, 48 at 25 %."""
-    return BASE_HORIZON_POINTS // step_minutes(sampling_rate)
+    return 192 // step_minutes(sampling_rate)
 
 
 def freq_for(sampling_rate: float, style: str = "min") -> str:
@@ -86,7 +65,7 @@ def freq_for(sampling_rate: float, style: str = "min") -> str:
     internal calendar features are part of the published numbers, and changing
     the label would move them.  Recorded as a limitation, not used as a fix.
     """
-    minutes = int(PAPER_STEP_MINUTES * step_minutes(sampling_rate))
+    minutes = int(15 * step_minutes(sampling_rate))
     return f"{minutes}T" if style == "T" else f"{minutes}min"
 
 
@@ -96,7 +75,8 @@ def native_step_minutes(dataset: str) -> int:
 
 def steps_per_day(sampling_rate: float, dataset: str | None = None) -> int:
     """Points in one wall-clock day after subsampling."""
-    base = DATASET_STEP_MINUTES[dataset] if dataset else PAPER_STEP_MINUTES
+    # 15 minutes is the paper's grid, used for every label.
+    base = DATASET_STEP_MINUTES[dataset] if dataset else 15
     return int(round(1440.0 / (base * step_minutes(sampling_rate))))
 
 
@@ -106,7 +86,8 @@ def sampling_tag(sampling_rate: float) -> str:
 
 
 def runs_for(model: str) -> int:
-    return DEFAULT_RUNS["deterministic" if model in DETERMINISTIC_MODELS else "deep"]
+    """Runs per cell: one for a deterministic model, ten when seeds are averaged."""
+    return 1 if model in ("LightGBM", "Chronos2", "Timestral") else 10
 
 
 def run_dir(root, dataset: str, model: str, sampling_rate: float, run: int = 1,
@@ -121,8 +102,8 @@ def run_dir(root, dataset: str, model: str, sampling_rate: float, run: int = 1,
     """
     base = Path(root) / f"results_{dataset}" / model / f"Sampling_{sampling_tag(sampling_rate)}"
     if exog_level != "L0":
-        if exog_level not in EXOG_LEVELS:
-            raise ValueError(f"unknown exog level {exog_level!r}; known: {EXOG_LEVELS}")
+        if exog_level not in ("L0", "COV"):
+            raise ValueError(f"unknown exog level {exog_level!r}; known: {('L0', 'COV')}")
         base = base / exog_level
     if style == "epochs":
         return base / f"Epochs_{epochs}_{run}"

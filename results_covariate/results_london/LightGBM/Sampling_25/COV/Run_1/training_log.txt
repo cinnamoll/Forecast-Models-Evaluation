@@ -1,0 +1,10 @@
+2026-11-17 21:07:05,027 - INFO - Logger initialized at results_covariate/results_london/LightGBM/Sampling_25/COV/Run_1/training_log.txt
+2026-11-17 21:07:05,027 - INFO - Run 1: Start training LightGBM models (covariate level COV)...
+2026-11-17 21:07:05,088 - INFO - Run 1 - london_load - LightGBM
+2026-11-17 21:07:05,088 - INFO - Using random seed: 3923063073
+2026-11-17 21:07:05,090 - INFO - lagged 7 past-only covariate(s) by 48 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-17 21:07:05,091 - INFO - Training LightGBM model for london_load on 4329 samples (25.0% of original data)...
+2026-11-17 21:07:05,233 - INFO - london_load (LightGBM) - MAE: 0.0242, RMSE: 0.0340
+2026-11-17 21:07:05,460 - INFO - Saved model metrics to results_covariate/results_london/LightGBM/Sampling_25/COV/Run_1/model_metrics_summary.csv
+2026-11-17 21:07:05,565 - INFO - Run 1: End training LightGBM models.
+2026-11-17 21:07:05,565 - INFO - Training completed in 0.54 seconds.

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.transforms import ScaledTranslation
 import numpy as np
 import pandas as pd
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 def _one_sided_normal_cdf(value: float) -> float:
     return 0.5 * (1.0 + math.erf(value / math.sqrt(2.0)))
@@ -259,7 +259,7 @@ def plot_dm_heatmaps(
 
 def run_dm_for_dataset(
     dataset_name: str,
-    base_dir: Path = PROJECT_ROOT,
+    base_dir: Path = Path(__file__).resolve().parents[1],
     output_dir: Optional[Path] = None,
     font_size: int = 9,
     legend_names: Optional[Dict[str, str]] = None,
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     }
     parser = argparse.ArgumentParser(description="Compute and plot DM test heatmaps for model comparisons.")
     parser.add_argument("--datasets", nargs="+", choices=["belgium", "germany", "london", "zonnedael"], default=["london"], help="Datasets to compare.")
-    parser.add_argument("--base_dir", type=Path, default=PROJECT_ROOT, help="Project directory containing results.")
+    parser.add_argument("--base_dir", type=Path, default=Path(__file__).resolve().parents[1], help="Project directory containing results.")
     parser.add_argument("--output_dir", type=Path, help="Output root; otherwise <base_dir>/results/dm_test.")
     parser.add_argument("--font_size", type=int, default=9, help="Plot font size.")
     args = parser.parse_args()

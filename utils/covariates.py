@@ -43,17 +43,6 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-EXOGENOUS_DIR = PROJECT_ROOT / "data" / "exogenous"
-
-#: dataset -> weather file under ``data/exogenous/weather``.
-WEATHER_FILES = {
-    "belgium": "brussels_2024.csv",
-    "germany": "lower_saxony_approx_2024.csv",
-    "london": "london_2013.csv",
-    "zonnedael": "zonnedael_approx_2013.csv",
-}
-
 #: Raw weather columns -> feature names used by every model.
 WEATHER_COLUMNS = {
     "temperature_2m": "temperature",
@@ -65,45 +54,7 @@ WEATHER_COLUMNS = {
     "precipitation": "precipitation",
 }
 
-PRICE_COLUMN = "day_ahead_price"
-SOC_COLUMN = "soc"
-
-#: Static hardware columns of the Belgium release.  ``bess_model`` and
-#: ``ac_phase`` are strings and are integer-coded like the calendar columns.
-STATIC_NUMERIC = (
-    "pv_peak_kwp",
-    "bess_energy_kwh",
-    "bess_charge_kw",
-    "bess_discharge_kw",
-    "inverter_max_ac_kw",
-    "house_breaker_kva",
-)
-STATIC_CATEGORICAL = ("bess_model", "ac_phase")
-
 CALENDAR_COLUMNS = ("quarter_hour", "hour", "minute", "dayofweek", "is_weekend")
-
-#: Columns that may be handed to a model as observed-in-advance values.
-KNOWN_FUTURE_COLUMNS = CALENDAR_COLUMNS + (PRICE_COLUMN,)
-#: Codes, embedded or target-encoded by the model rather than scaled.  Static
-#: columns are *not* categorical as a class: the hardware table is mostly
-#: physical ratings (kWp, kWh), and embedding a rating would throw away its order.
-CATEGORICAL_COLUMNS = CALENDAR_COLUMNS + ("static_ac_phase", "static_bess_model")
-
-#: Blocks used by the TimeSHAP player set.  Grouping is physical, not syntactic:
-#: ``quarter_hour`` is ``hour * 4 + minute // 15``, so the three time-of-day
-#: columns carry the same information and must not be scored as three
-#: independent players (Shapley would split the credit arbitrarily between them).
-FEATURE_GROUPS = {
-    "time_of_day": ("quarter_hour", "hour", "minute"),
-    "day_of_week": ("dayofweek", "is_weekend"),
-    "temperature": ("temperature",),
-    "radiation": ("ghi", "dni", "cloud_cover"),
-    "air": ("humidity", "wind_speed", "precipitation"),
-    "price": (PRICE_COLUMN,),
-    "state": (SOC_COLUMN,),
-}
-
-GROUP_ORDER = ("time_of_day", "day_of_week", "temperature", "radiation", "air", "price", "state", "static")
 
 
 # --------------------------------------------------------------------- calendar
@@ -146,7 +97,13 @@ def _naive(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
 
 def weather_frame(dataset: str, index: pd.DatetimeIndex) -> pd.DataFrame:
     """Hourly reanalysis interpolated onto ``index``, one column per feature."""
-    path = EXOGENOUS_DIR / "weather" / WEATHER_FILES[dataset]
+    # dataset -> weather file under data/exogenous/weather.
+    path = (Path(__file__).resolve().parents[1] / "data" / "exogenous" / "weather" / {
+        "belgium": "brussels_2024.csv",
+        "germany": "lower_saxony_approx_2024.csv",
+        "london": "london_2013.csv",
+        "zonnedael": "zonnedael_approx_2013.csv",
+    }[dataset])
     if not path.exists():
         raise FileNotFoundError(f"weather archive missing for {dataset}: {path}")
     raw = pd.read_csv(path, parse_dates=["time"])
@@ -170,7 +127,7 @@ def weather_frame(dataset: str, index: pd.DatetimeIndex) -> pd.DataFrame:
 # ------------------------------------------------------------------------ price
 
 def _belgium_house_dir(house: int) -> Path:
-    root = EXOGENOUS_DIR / "Belgium"
+    root = Path(__file__).resolve().parents[1] / "data" / "exogenous" / "Belgium"
     for candidate in sorted(root.glob(f"house{house}_*")):
         if candidate.is_dir():
             return candidate
@@ -196,7 +153,7 @@ def price_frame(dataset: str, house: int | None, index: pd.DatetimeIndex) -> pd.
     # The auction price is constant per hour: hold the last cleared value rather
     # than interpolate, which would invent prices between two auctions.
     aligned = series.reindex(series.index.union(target)).ffill().bfill().reindex(target)
-    frame = pd.DataFrame({PRICE_COLUMN: aligned.to_numpy()}, index=pd.DatetimeIndex(index))
+    frame = pd.DataFrame({"day_ahead_price": aligned.to_numpy()}, index=pd.DatetimeIndex(index))
     return frame
 
 
@@ -224,16 +181,20 @@ def soc_frame(dataset: str, house: int | None, task: str, index: pd.DatetimeInde
     if aligned.isna().all():
         return pd.DataFrame(index=index)
     aligned = aligned.bfill()
-    return pd.DataFrame({SOC_COLUMN: aligned.to_numpy()}, index=pd.DatetimeIndex(index))
+    return pd.DataFrame({"soc": aligned.to_numpy()}, index=pd.DatetimeIndex(index))
 
 
 # ----------------------------------------------------------------------- static
 
 def static_frame(dataset: str, entity: str, index: pd.DatetimeIndex) -> pd.DataFrame:
-    """Hardware metadata of one entity, broadcast over the series."""
+    """Hardware metadata of one entity, broadcast over the series.
+
+    ``bess_model`` and ``ac_phase`` are strings and are integer-coded like the
+    calendar columns; the rest are physical ratings (kWp, kWh) and stay numeric.
+    """
     if dataset != "belgium":
         return pd.DataFrame(index=index)
-    path = EXOGENOUS_DIR / "Belgium" / "belgium_hardware.csv"
+    path = Path(__file__).resolve().parents[1] / "data" / "exogenous" / "Belgium" / "belgium_hardware.csv"
     if not path.exists():
         return pd.DataFrame(index=index)
     table = pd.read_csv(path).set_index("entity_id")
@@ -241,10 +202,11 @@ def static_frame(dataset: str, entity: str, index: pd.DatetimeIndex) -> pd.DataF
         return pd.DataFrame(index=index)
     row = table.loc[entity]
     values = {}
-    for column in STATIC_NUMERIC:
+    for column in ("pv_peak_kwp", "bess_energy_kwh", "bess_charge_kw",
+                   "bess_discharge_kw", "inverter_max_ac_kw", "house_breaker_kva"):
         if column in row.index and pd.notna(row[column]):
             values[f"static_{column}"] = np.full(len(index), float(row[column]))
-    for column in STATIC_CATEGORICAL:
+    for column in ("bess_model", "ac_phase"):
         if column in row.index and pd.notna(row[column]):
             values[f"static_{column}"] = np.full(len(index), float(_code(str(row[column]))))
     if not values:
@@ -262,16 +224,26 @@ def _code(value: str, vocabulary: tuple[str, ...] | None = None) -> int:
 # ------------------------------------------------------------------- assembly
 
 def roles_for(frame: pd.DataFrame) -> dict:
-    """Split the covariate columns of ``frame`` by role."""
+    """Split the covariate columns of ``frame`` by role.
+
+    ``known_future`` are the columns a model may see over the horizon (calendar
+    plus the day-ahead price); everything else measured is ``past_only``;
+    ``static_`` prefixed columns are constant per entity.
+    """
+    # Calendar and the auction are known in advance; the price is Belgium-only.
+    known_future_columns = CALENDAR_COLUMNS + ("day_ahead_price",)
+    # Codes the models embed or target-encode instead of scaling.
+    categorical_columns = CALENDAR_COLUMNS + ("static_ac_phase", "static_bess_model")
+
     known_future, past_only, static, categorical = [], [], [], []
     for column in frame.columns:
         if column.startswith("static_"):
             static.append(column)
-        elif column in KNOWN_FUTURE_COLUMNS:
+        elif column in known_future_columns:
             known_future.append(column)
         else:
             past_only.append(column)
-        if column in CATEGORICAL_COLUMNS:
+        if column in categorical_columns:
             categorical.append(column)
     return {
         "known_future": known_future,
@@ -350,13 +322,28 @@ def shift_past_only(frame: pd.DataFrame, roles: dict, points: int) -> pd.DataFra
 
 
 def column_groups(columns) -> dict:
-    """``column -> block name`` for the TimeSHAP player set."""
+    """``column -> block name`` for the TimeSHAP player set.
+
+    Grouping is physical, not syntactic: ``quarter_hour`` is
+    ``hour * 4 + minute // 15``, so the three time-of-day columns carry the same
+    information and must not be scored as three independent players (Shapley would
+    split the credit arbitrarily between them).
+    """
+    feature_groups = {
+        "time_of_day": ("quarter_hour", "hour", "minute"),
+        "day_of_week": ("dayofweek", "is_weekend"),
+        "temperature": ("temperature",),
+        "radiation": ("ghi", "dni", "cloud_cover"),
+        "air": ("humidity", "wind_speed", "precipitation"),
+        "price": ("day_ahead_price",),
+        "state": ("soc",),
+    }
     groups = {}
     for column in columns:
         if column.startswith("static_"):
             groups[column] = "static"
             continue
-        for group, members in FEATURE_GROUPS.items():
+        for group, members in feature_groups.items():
             if column in members:
                 groups[column] = group
                 break
@@ -366,12 +353,14 @@ def column_groups(columns) -> dict:
 
 
 def group_columns(columns) -> dict:
-    """``block name -> [columns]``, in ``GROUP_ORDER``."""
+    """``block name -> [columns]``, in the physical block order."""
+    group_order = ("time_of_day", "day_of_week", "temperature", "radiation",
+                   "air", "price", "state", "static")
     per_column = column_groups(columns)
     grouped = {}
     for column, group in per_column.items():
         grouped.setdefault(group, []).append(column)
-    ordered = {name: grouped[name] for name in GROUP_ORDER if name in grouped}
+    ordered = {name: grouped[name] for name in group_order if name in grouped}
     for name in sorted(set(grouped) - set(ordered)):
         ordered[name] = grouped[name]
     return ordered

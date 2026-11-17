@@ -13,9 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.exogenous.config import WEATHER_DIR, MissingSourceError, site_for
-
-ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+from utils.exogenous.config import MissingSourceError, site_for
 
 HOURLY_VARIABLES = (
     "temperature_2m",
@@ -27,11 +25,11 @@ HOURLY_VARIABLES = (
     "precipitation",
 )
 
-REQUEST_TIMEOUT = 120
-
 
 def cache_path(site_id, year):
-    return Path(WEATHER_DIR) / f"{site_id}_{int(year)}.csv"
+    # data/exogenous/weather/<site>_<year>.csv, from utils/exogenous/sources/.
+    weather_dir = Path(__file__).resolve().parents[3] / "data" / "exogenous" / "weather"
+    return weather_dir / f"{site_id}_{int(year)}.csv"
 
 
 def fetch_year(dataset_name, year, session=None):
@@ -54,7 +52,9 @@ def fetch_year(dataset_name, year, session=None):
     # require the HTTP client to be installed.
     import requests
 
-    response = (session or requests).get(ARCHIVE_URL, params=params, timeout=REQUEST_TIMEOUT)
+    response = (session or requests).get(
+        "https://archive-api.open-meteo.com/v1/archive", params=params, timeout=120
+    )
     response.raise_for_status()
     payload = response.json()
 
@@ -120,8 +120,9 @@ def load_hourly(dataset_name, start, end, pad=pd.Timedelta(hours=6)):
 
 def available_years(dataset_name):
     site = site_for(dataset_name)
+    weather_dir = Path(__file__).resolve().parents[3] / "data" / "exogenous" / "weather"
     return sorted(
         int(p.stem.split("_")[-1])
-        for p in Path(WEATHER_DIR).glob(f"{site['site_id']}_*.csv")
+        for p in weather_dir.glob(f"{site['site_id']}_*.csv")
         if p.stem.split("_")[-1].isdigit()
     )

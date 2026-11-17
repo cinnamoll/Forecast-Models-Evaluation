@@ -1,0 +1,23 @@
+2026-11-17 23:39:05,313 - INFO - Logger initialized at results/results_belgium/Chronos2/Sampling_50/Run_1/training_log.txt
+2026-11-17 23:39:05,313 - INFO - ...Start Chronos-2 forecasting...
+2026-11-17 23:39:05,313 - INFO - Forecasting PV
+2026-11-17 23:39:05,327 - INFO - PV_house_1: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:05,696 - INFO - PV_house_1 - MAE: 0.0943, RMSE: 0.1709
+2026-11-17 23:39:06,110 - INFO - PV_house_2: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:06,470 - INFO - PV_house_2 - MAE: 0.0967, RMSE: 0.1765
+2026-11-17 23:39:06,621 - INFO - PV_house_3: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:07,014 - INFO - PV_house_3 - MAE: 0.0964, RMSE: 0.1761
+2026-11-17 23:39:07,150 - INFO - PV_house_4: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:07,543 - INFO - PV_house_4 - MAE: 0.0980, RMSE: 0.1797
+2026-11-17 23:39:07,676 - INFO - Forecasting BESS
+2026-11-17 23:39:07,687 - INFO - BESS_house_1: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:08,173 - INFO - BESS_house_1 - MAE: 0.0701, RMSE: 0.1186
+2026-11-17 23:39:08,322 - INFO - BESS_house_2: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:08,708 - INFO - BESS_house_2 - MAE: 0.1165, RMSE: 0.1609
+2026-11-17 23:39:08,834 - INFO - BESS_house_3: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:09,182 - INFO - BESS_house_3 - MAE: 0.1032, RMSE: 0.1582
+2026-11-17 23:39:09,313 - INFO - BESS_house_4: context=4272 steps, horizon=96, covariates: 0 known-future, 0 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-17 23:39:09,673 - INFO - BESS_house_4 - MAE: 0.0699, RMSE: 0.1103
+2026-11-17 23:39:09,786 - INFO - Saved model metrics to results/results_belgium/Chronos2/Sampling_50/Run_1/model_metrics_summary.csv
+2026-11-17 23:39:10,024 - INFO - ...End Chronos-2 forecasting...
+2026-11-17 23:39:10,024 - INFO - Forecasting completed in 4.71 seconds.

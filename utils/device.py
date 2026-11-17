@@ -1,6 +1,5 @@
 """Shared command-line GPU selection helpers."""
 
-SUPPORTED_GPU_IDS = (0, 1)
 GPU_HELP = (
     "GPU index for supported local models: 0 uses GPU 0, 1 uses GPU 1; "
     "any other value uses CPU."
@@ -8,7 +7,7 @@ GPU_HELP = (
 
 def uses_gpu(gpu):
     """Return whether ``gpu`` selects one of the supported CUDA devices."""
-    return gpu in SUPPORTED_GPU_IDS
+    return gpu in (0, 1)
 
 
 def torch_device(gpu):

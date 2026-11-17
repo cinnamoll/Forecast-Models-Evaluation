@@ -51,9 +51,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+if str(Path(__file__).resolve().parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from utils.covariates import group_columns, roles_for, scale_covariates, shift_past_only
 from utils.protocol import horizon_for, sampling_tag,steps_per_day
@@ -61,21 +60,6 @@ from utils.timeshap import (apply_coalition, additivity_residual, covariate_play
                             enumerate_game, group_shares, periodic_background,
                             shapley_exact, shares_by_player, signed_by_player,
                             temporal_players, temporal_pruning_report)
-
-LOGGER = logging.getLogger("timeshap")
-
-MODELS = ("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT", "Chronos2", "Timestral")
-
-#: Models whose inference can be re-fed a perturbed window without refitting.
-NO_REFIT_MODELS = ("LightGBM", "TFT", "Chronos2", "Timestral")
-
-SERIES_LOADERS = {
-    "pv_house": "get_inputs_for_pv",
-    "bess_house": "get_inputs_for_battery",
-    "germany_load": "get_inputs_for_load",
-    "london_load": "get_inputs_for_load",
-    "zonnedael_customer": "get_inputs_for_zonnedael_consumption",
-}
 
 
 def series_prefix(series: str) -> str:
@@ -102,7 +86,10 @@ def load_long_frame(dataset: str, series: str, level: str, sampling: float) -> p
     start = pd.Timestamp("2024-01-01 00:00:00", tz="UTC")
     end = pd.Timestamp("2024-04-01 00:00:00", tz="UTC")
     if prefix in ("pv_house", "bess_house"):
-        frame = getattr(loader, SERIES_LOADERS[prefix])(entity, start, end, level=level)
+        # pv -> get_inputs_for_pv, bess -> get_inputs_for_battery.
+        frame = getattr(loader, {"pv_house": "get_inputs_for_pv",
+                                 "bess_house": "get_inputs_for_battery"}[prefix])(
+            entity, start, end, level=level)
     elif prefix == "zonnedael_customer":
         frame = loader.get_inputs_for_zonnedael_consumption(entity, level=level)
     elif dataset == "germany":
@@ -338,8 +325,8 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
         "temporal_players": include_temporal,
     }, indent=2), encoding="utf-8")
 
-    LOGGER.info("%s: %d players, %d coalitions in %.1fs, residual %.2e",
-                model, len(players), 2 ** len(players), elapsed, residual)
+    logging.getLogger("timeshap").info("%s: %d players, %d coalitions in %.1fs, residual %.2e",
+                                       model, len(players), 2 ** len(players), elapsed, residual)
     return {"shares": grouped, "players": shares, "residual": residual,
             "seconds": elapsed, "n_players": len(players)}
 
@@ -354,14 +341,19 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="TimeSHAP explanation of the covariate models.")
     parser.add_argument("--dataset", required=True, choices=["belgium", "germany", "london", "zonnedael"])
     parser.add_argument("--series", required=True)
-    parser.add_argument("--models", nargs="+", choices=list(MODELS), default=list(MODELS))
+    parser.add_argument("--models", nargs="+",
+                        choices=list(("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT",
+                                      "Chronos2", "Timestral")),
+                        default=list(("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT",
+                                      "Chronos2", "Timestral")))
     parser.add_argument("--level", default="COV", choices=list(("L0", "COV")))
     parser.add_argument("--sampling", type=float, default=100.0)
     parser.add_argument("--mode", choices=["background", "mean", "zero"], default="background",
                         help="Perturbation: hour-of-day background (main), column mean, or zero.")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--gpu", type=int, default=-1)
-    parser.add_argument("--params-dir", type=Path, default=PROJECT_ROOT / "results" / "tuning")
+    parser.add_argument("--params-dir", type=Path,
+                        default=Path(__file__).resolve().parents[1] / "results" / "tuning")
     parser.add_argument("--allow-refit", action="store_true",
                         help="Explain DeepNPTS/PatchTST/TCN by refitting per coalition "
                              "(covariate players only; expensive but clean).")
@@ -377,14 +369,15 @@ def main(argv=None) -> int:
     freq = f"{int(15 * (100 / args.sampling))}min"
 
     players = build_players(scaled, roles, horizon, per_day, include_temporal=True)
-    LOGGER.info("%s/%s: %d points, horizon %d, %d players -> %d coalitions",
-                args.dataset, args.series, len(scaled), horizon, len(players), 2 ** len(players))
+    logging.getLogger("timeshap").info(
+        "%s/%s: %d points, horizon %d, %d players -> %d coalitions",
+        args.dataset, args.series, len(scaled), horizon, len(players), 2 ** len(players))
     if args.dry_run:
         for player in players:
             print(f"  {player.name:14s} {player.kind:10s} rows={player.size:5d} columns={len(player.columns)}")
         return 0
 
-    out_dir = args.out or (PROJECT_ROOT / "results" / "xai_timeshap" / args.dataset /
+    out_dir = args.out or (Path(__file__).resolve().parents[1] / "results" / "xai_timeshap" / args.dataset /
                            f"{args.series}_{args.level}_{sampling_tag(args.sampling)}")
     shares_rows, notes = {}, {}
     for model in args.models:
@@ -394,12 +387,13 @@ def main(argv=None) -> int:
             payload = json.loads(params_path.read_text(encoding="utf-8"))
             params = dict(payload.get("best_params", payload))
         include_temporal = model != "LightGBM"   # a direct regressor has no lag
-        if model not in NO_REFIT_MODELS and not args.allow_refit:
+        if model not in ("LightGBM", "TFT", "Chronos2", "Timestral") and not args.allow_refit:
             notes[model] = ("skipped: NeuralForecast freezes the context and hist_exog into the "
                             "fitted dataset, so a clean coalition game needs --allow-refit")
-            LOGGER.warning("%s skipped (no clean game without refit); pass --allow-refit", model)
+            logging.getLogger("timeshap").warning(
+                "%s skipped (no clean game without refit); pass --allow-refit", model)
             continue
-        if model not in NO_REFIT_MODELS:
+        if model not in ("LightGBM", "TFT", "Chronos2", "Timestral"):
             include_temporal = False
             notes[model] = "refit per coalition; covariate players only"
         try:
@@ -408,7 +402,7 @@ def main(argv=None) -> int:
             result = explain(model, scaled, roles, horizon, per_day, args.mode, predict,
                              include_temporal, out_dir / model, args.sampling, args.level)
         except Exception as error:  # one model must not kill the whole report
-            LOGGER.error("%s failed: %s", model, error, exc_info=True)
+            logging.getLogger("timeshap").error("%s failed: %s", model, error, exc_info=True)
             notes[model] = f"failed: {error}"
             continue
         shares_rows[model] = result["shares"]

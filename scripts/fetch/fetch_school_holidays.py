@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch school-holiday calendars from the OpenHolidays API (L1).
+"""Fetch school-holiday calendars from the OpenHolidays API.
 
 OpenHolidays coverage is uneven: NL is populated for recent years, GB is absent
 and 2013 is generally missing.  The script therefore reports a coverage table and
-only writes what the API actually returns, so the feature store can mark the
-school-holiday column n/a instead of pretending it exists.
+only writes what the API actually returns.
 """
 
 import argparse
@@ -14,27 +13,25 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+if str(Path(__file__).resolve().parents[2]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from utils.exogenous.config import HOLIDAY_DIR, SITES  # noqa: E402
-
-API_URL = "https://openholidaysapi.org/SchoolHolidays"
-LANGUAGES = {"GB": "EN", "DE": "DE", "NL": "NL", "BE": "NL"}
-REQUEST_TIMEOUT = 60
+from utils.exogenous.config import SITES  # noqa: E402
 
 
 def fetch(country, subdivision, year):
+    languages = {"GB": "EN", "DE": "DE", "NL": "NL", "BE": "NL"}
     params = {
         "countryIsoCode": country,
         "validFrom": f"{year}-01-01",
         "validTo": f"{year}-12-31",
-        "languageIsoCode": LANGUAGES.get(country, "EN"),
+        "languageIsoCode": languages.get(country, "EN"),
     }
     if subdivision:
         params["subdivisionCode"] = subdivision
-    response = requests.get(API_URL, params=params, timeout=REQUEST_TIMEOUT)
+    response = requests.get(
+        "https://openholidaysapi.org/SchoolHolidays", params=params, timeout=60
+    )
     response.raise_for_status()
     payload = response.json()
 
@@ -61,13 +58,16 @@ def main(argv=None):
     parser.add_argument("--years", nargs="+", type=int, default=[2013, 2018, 2019, 2023, 2024, 2026])
     args = parser.parse_args(argv)
 
+    # data/exogenous/holidays, from scripts/fetch/.
+    holiday_dir = Path(__file__).resolve().parents[2] / "data" / "exogenous" / "holidays"
+
     datasets = list(SITES) if "all" in args.dataset else args.dataset
     countries = {}
     for dataset in datasets:
         site = SITES[dataset]
         countries.setdefault(site["country"], site.get("subdivision"))
 
-    HOLIDAY_DIR.mkdir(parents=True, exist_ok=True)
+    holiday_dir.mkdir(parents=True, exist_ok=True)
     print(f"{'country':8s} {'subdiv':8s} {'year':6s} rows")
     for country, subdivision in countries.items():
         frames = []
@@ -76,10 +76,10 @@ def main(argv=None):
             print(f"{country:8s} {str(subdivision):8s} {year:<6d} {len(rows)}")
             if rows:
                 frames.append(pd.DataFrame(rows))
-        out = HOLIDAY_DIR / f"school_holidays_{country.upper()}.csv"
+        out = holiday_dir / f"school_holidays_{country.upper()}.csv"
         if frames:
             pd.concat(frames).drop_duplicates().to_csv(out, index=False)
-            print(f"  -> {out.relative_to(PROJECT_ROOT)}")
+            print(f"  -> {out.relative_to(Path(__file__).resolve().parents[2])}")
         else:
             print(f"  no data returned for {country}; school holidays stay n/a there")
 

@@ -1,9 +1,9 @@
-"""Input construction shared by the two zero-shot foundation models.
+"""Input construction shared by the zero-shot foundation models.
 
-Chronos-2 and Timestral both want the same three things: a context, covariates
-that stop at the forecast origin, and covariates that extend over the horizon.
-Building them in one place is what keeps the two scripts — and their TimeSHAP
-explanations — measuring the same object.
+Chronos-2, Timestral and TimesFM 3 all want the same three things: a context,
+covariates that stop at the forecast origin, and covariates that extend over the
+horizon.  Building them in one place is what keeps those scripts — and their
+TimeSHAP explanations — measuring the same object.
 
 Roles decide the shape, not the file:
 
@@ -12,7 +12,7 @@ Roles decide the shape, not the file:
 * ``past_only`` (weather, state of charge) is passed over the context only.  No
   value after the origin is handed over, so the horizon behaves like persistence
   rather than like a perfect weather forecast.
-* ``static`` has no channel in either checkpoint.  It is reported and dropped
+* ``static`` has no channel in any checkpoint.  It is reported and dropped
   instead of being faked as a constant covariate, which for a single-series
   forecast carries no information anyway.
 """
@@ -24,9 +24,14 @@ import pandas as pd
 
 from utils.covariates import scale_covariates
 
+def prepare_inputs(y_df: pd.DataFrame, roles: dict, level: str, horizon: int, scale_categorical: bool = False) -> dict:
+    """Per-column arrays for one forecast of one series.
 
-def prepare_inputs(y_df: pd.DataFrame, roles: dict, level: str, horizon: int) -> dict:
-    """Per-column arrays for one forecast of one series."""
+    ``scale_categorical`` asks for a checkpoint with no integer-input channel
+    (TimesFM 3): the calendar codes are then min-max scaled like any other
+    continuous covariate instead of being kept as codes of an embedding table.
+    Chronos-2 and Timestral embed them, so they keep the default.
+    """
     feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
     context_end = len(y_df) - horizon
     if context_end <= 0:
@@ -34,9 +39,14 @@ def prepare_inputs(y_df: pd.DataFrame, roles: dict, level: str, horizon: int) ->
 
     frame = y_df[feature_columns] if feature_columns else pd.DataFrame(index=y_df.index)
     if feature_columns and level != "L0":
-        frame = scale_covariates(frame, roles, train_end=context_end)
+        # A scaled code is what a checkpoint without an embedding table needs:
+        # scale_covariates skips ``roles["categorical"]``, so that list is
+        # emptied for it and a quarter_hour in 0..95 cannot dominate a
+        # temperature in Celsius.
+        scaling_roles = dict(roles, categorical=[]) if scale_categorical else roles
+        frame = scale_covariates(frame, scaling_roles, train_end=context_end)
 
-    categorical = set(roles["categorical"]) if level != "L0" else set()
+    categorical = set(roles["categorical"]) if level != "L0" and not scale_categorical else set()
     payload = {
         "context": y_df["y"].to_numpy(dtype=np.float32)[:context_end],
         "context_end": context_end,
@@ -76,7 +86,6 @@ def prepare_inputs(y_df: pd.DataFrame, roles: dict, level: str, horizon: int) ->
     payload["report"]["n_past_only"] = len(payload["past_numeric"]) + len(payload["past_categorical"])
     return payload
 
-
 def _stack(block: dict, expected_length: int) -> np.ndarray | None:
     """``{name: array}`` -> ``(C, length)``, or ``None`` when the block is empty."""
     if not block:
@@ -114,6 +123,27 @@ def chronos2_input(payload: dict) -> dict:
     if future_covariates:
         entry["future_covariates"] = future_covariates
     return entry
+
+
+def timesfm3_covariates(payload: dict) -> dict:
+    """``predict`` keyword arguments carrying the TimesFM 3 covariate channels.
+
+    TimesFM 3 has no embedding table and no ``future_covariates`` block: the
+    covariates enter as extra variates, ``(channels, context)`` for the
+    past-only columns and ``(channels, context + horizon)`` for the columns that
+    are known over the horizon.  An empty block is left out instead of being
+    passed as an empty array.
+    """
+    arguments = {}
+    past_only = {**payload["past_numeric"], **payload["past_categorical"]}
+    stacked = _stack(past_only, payload["context_end"])
+    if stacked is not None:
+        arguments["past_only_covariates"] = stacked
+    past_future = {**payload["known_numeric"], **payload["known_categorical"]}
+    stacked = _stack(past_future, payload["context_end"] + payload["horizon"])
+    if stacked is not None:
+        arguments["past_future_covariates"] = stacked
+    return arguments
 
 
 def timestral_arguments(payload: dict) -> dict:

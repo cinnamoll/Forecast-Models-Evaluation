@@ -45,29 +45,16 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import pandas as pd  # noqa: E402
 
-from utils.exogenous.config import METADATA_DIR, PRICE_DIR  # noqa: E402
-
-RELEASE_DIR = METADATA_DIR / "Belgium"
-PRICE_OUT = PRICE_DIR / "day_ahead_BE_2024_paper.csv"
-STATE_OUT = METADATA_DIR / "belgium_state.csv"
 #: The benchmark forecasts 2024-01-01 .. 2024-04-01 (data/README.md,
 #: utils/protocol.py).  The release's experiment window (08-04 .. 17-06) is
 #: deliberately not read: nothing in the benchmark uses it, and mixing a
 #: different period into a covariate makes the column impossible to defend.
-USED_PERIOD = "1-1_1-4"
-HARDWARE_PATH = METADATA_DIR / "belgium_hardware.csv"
-
-STEP = pd.Timedelta(minutes=15)
 
 # The two windows the release ships, keyed by the token in the folder name.
 PERIODS = {
     "1-1_1-4": ("2024-01-01 00:00:00", "2024-04-01 00:00:00"),  # training window
     "8-4_17-6": ("2024-04-08 15:00:00", "2024-06-17 15:00:00"),  # experiment window
 }
-
-FOLDER_RE = re.compile(r"^house(\d+)_(1-1_1-4|8-4_17-6)(?:_environment)?$")
-
-PRICE_COLUMNS = ("time", "price_eur_mwh")
 
 
 def _duplicate_skips(duplicates):
@@ -91,9 +78,10 @@ def _naive(series_or_value):
     return pd.Timestamp(str(series_or_value).replace("Z", "")).tz_localize(None)
 
 
-def scan_release(base=RELEASE_DIR):
+def scan_release(base=None):
     """Map house number -> {period token: folder}, flagging duplicated folders."""
-    base = Path(base)
+    base = Path(base or PROJECT_ROOT / "data" / "exogenous" / "Belgium")
+    folder_re = re.compile(r"^house(\d+)_(1-1_1-4|8-4_17-6)(?:_environment)?$")
     if not base.is_dir():
         raise SystemExit(
             f"release directory not found: {base}\n"
@@ -105,14 +93,14 @@ def scan_release(base=RELEASE_DIR):
     for path in sorted(base.iterdir()):
         if not path.is_dir():
             continue
-        match = FOLDER_RE.match(path.name)
+        match = folder_re.match(path.name)
         if not match:
             continue
         house, period = int(match.group(1)), match.group(2)
         found.setdefault(house, {})[period] = path
 
     if not found:
-        raise SystemExit(f"no house folder matched {FOLDER_RE.pattern} under {base}")
+        raise SystemExit(f"no house folder matched {folder_re.pattern} under {base}")
 
     # A folder that is a byte-identical copy of another one is a download
     # mistake, not a second period: it silently gives a house two copies of the
@@ -145,8 +133,9 @@ def _first_present(found, filename):
     return None
 
 
-def build_price_table(found, out_path=PRICE_OUT):
+def build_price_table(found, out_path=None):
     """Hourly EUR/MWh series from the release's per-kWh 15-min quote."""
+    out_path = Path(out_path or PROJECT_ROOT / "data" / "exogenous" / "prices" / "day_ahead_BE_2024_paper.csv")
     source = _first_present(found, "day_ahead_prices.csv")
     if source is None:
         raise SystemExit("no day_ahead_prices.csv anywhere in the release")
@@ -175,7 +164,7 @@ def build_price_table(found, out_path=PRICE_OUT):
 
     hourly.index.name = "time"
     table = hourly.reset_index()[["time", "quote"]].rename(columns={"quote": "price_eur_mwh"})
-    table = table[list(PRICE_COLUMNS)].sort_values("time").reset_index(drop=True)
+    table = table[["time", "price_eur_mwh"]].sort_values("time").reset_index(drop=True)
 
     expected_hours = 91 * 24  # 2024-01-01 .. 2024-03-31, leap year
     if len(table) != expected_hours:
@@ -197,7 +186,7 @@ def build_price_table(found, out_path=PRICE_OUT):
     return out_path, stats
 
 
-def build_state_table(found, out_path=STATE_OUT, duplicates=()):
+def build_state_table(found, out_path=None, duplicates=()):
     """BESS state of charge per house and step, in [0, 1], long format.
 
     SOC is the one release column that is both a controller output and a
@@ -211,15 +200,19 @@ def build_state_table(found, out_path=STATE_OUT, duplicates=()):
     and counted rather than clipped, because clipping would invent a state.
     """
     skip = _duplicate_skips(duplicates)
+    out_path = Path(out_path or PROJECT_ROOT / "data" / "exogenous" / "metadata" / "belgium_state.csv")
+    # Only the 1-1_1-4 folders are read: the benchmark forecasts 2024-01-01 ..
+    # 2024-04-01, so the experiment window (08-04 .. 17-06) is out of scope.
+    used_period = "1-1_1-4"
 
     rows, faults = [], []
     for house in sorted(found):
-        path = found[house].get(USED_PERIOD)
+        path = found[house].get(used_period)
         if path is None or id(path) in skip:
             continue
         source = Path(path) / "soc.csv"
         if not source.exists():
-            faults.append(f"house_{house}: no soc.csv in the {USED_PERIOD} folder")
+            faults.append(f"house_{house}: no soc.csv in the {used_period} folder")
             continue
         frame = pd.read_csv(source)
         column = frame.columns[1]
@@ -228,7 +221,7 @@ def build_state_table(found, out_path=STATE_OUT, duplicates=()):
         )
         out_of_range = int((frame["bess_soc"].notna() & ~frame["bess_soc"].between(0.0, 1.0)).sum())
         if out_of_range:
-            faults.append(f"house_{house}/{USED_PERIOD}: {out_of_range} rows outside [0,1] dropped")
+            faults.append(f"house_{house}/{used_period}: {out_of_range} rows outside [0,1] dropped")
         frame.loc[~frame["bess_soc"].between(0.0, 1.0), "bess_soc"] = float("nan")
         rows.append(frame)
 
@@ -243,7 +236,7 @@ def build_state_table(found, out_path=STATE_OUT, duplicates=()):
     return out_path, table, coverage.round(4).to_dict(), faults
 
 
-def verify_against_hardware(found, hardware_path=HARDWARE_PATH):
+def verify_against_hardware(found, hardware_path=None):
     """Compare nameplate limits with the extremes actually reached in the release.
 
     This is a cross-check on both inputs, not an assertion: where the measured
@@ -251,7 +244,8 @@ def verify_against_hardware(found, hardware_path=HARDWARE_PATH):
     the operation, and the reader needs to know that before the static columns
     become covariates.
     """
-    if not Path(hardware_path).exists():
+    hardware_path = Path(hardware_path or PROJECT_ROOT / "data" / "exogenous" / "Belgium" / "belgium_hardware.csv")
+    if not hardware_path.exists():
         return None
     hardware = pd.read_csv(hardware_path).set_index("entity_id")
 
@@ -291,9 +285,12 @@ def verify_against_hardware(found, hardware_path=HARDWARE_PATH):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--release-dir", type=Path, default=RELEASE_DIR)
-    parser.add_argument("--price-out", type=Path, default=PRICE_OUT)
-    parser.add_argument("--state-out", type=Path, default=STATE_OUT)
+    parser.add_argument("--release-dir", type=Path,
+                        default=PROJECT_ROOT / "data" / "exogenous" / "Belgium")
+    parser.add_argument("--price-out", type=Path,
+                        default=PROJECT_ROOT / "data" / "exogenous" / "prices" / "day_ahead_BE_2024_paper.csv")
+    parser.add_argument("--state-out", type=Path,
+                        default=PROJECT_ROOT / "data" / "exogenous" / "metadata" / "belgium_state.csv")
     parser.add_argument("--check-only", action="store_true", help="report without writing anything")
     args = parser.parse_args(argv)
 
@@ -343,7 +340,7 @@ def main(argv=None):
 
     verification = verify_against_hardware(found)
     if verification is None:
-        print(f"\nno hardware table at {HARDWARE_PATH.relative_to(PROJECT_ROOT)}; "
+        print("\nno hardware table at data/exogenous/Belgium/belgium_hardware.csv; "
               "run scripts/fetch/build_metadata.py to cross-check nameplate limits")
     else:
         print("\nnameplate (paper Table A.6) vs measured extremes in the release:")
