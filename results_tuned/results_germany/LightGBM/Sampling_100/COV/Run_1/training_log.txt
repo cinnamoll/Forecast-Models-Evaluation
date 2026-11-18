@@ -1,0 +1,7 @@
+2026-11-18 23:35:29,435 - INFO - Logger initialized at /home/cinnamoll/Code/Forecast-Models-Evaluation/results_tuned/results_germany/LightGBM/Sampling_100/COV/Run_1/training_log.txt
+2026-11-18 23:35:29,435 - INFO - Run 1: Start training LightGBM models (covariate level COV)...
+2026-11-18 23:35:29,574 - INFO - Run 1 - germany_load - LightGBM
+2026-11-18 23:35:29,574 - INFO - Using random seed: 4018367559
+2026-11-18 23:35:29,579 - INFO - lagged 7 past-only covariate(s) by 192 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+2026-11-18 23:35:29,580 - INFO - Training LightGBM model for germany_load on 8544 samples (100.0% of original data)...
+2026-11-18 23:35:29,581 - INFO - LightGBM tuned parameters: {'num_leaves': 21, 'learning_rate': 0.016727476035243674, 'n_estimators': 100, 'min_data_in_leaf': 187, 'feature_fraction': 0.7110687445336494, 'bagging_fraction': 0.7442390173292651, 'objective': 'regression', 'bagging_freq': 1}

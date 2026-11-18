@@ -96,7 +96,7 @@ def sampling_tag(sampling_rate: float) -> str:
 
 def runs_for(model: str) -> int:
     """Runs per cell: one for a deterministic model, ten when seeds are averaged."""
-    return 1 if model in ("LightGBM", "Chronos2", "Timestral") else 10
+    return 1 if model in ("LightGBM", "Chronos2", "Timestral", "TimesFM3") else 10
 
 
 def run_dir(root, dataset: str, model: str, sampling_rate: float, run: int = 1,

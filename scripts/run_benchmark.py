@@ -30,26 +30,26 @@ from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
 from utils.tuning import tuned_resolution
 
 #: Models whose refit accepts ``--params_json``; the zero-shot ones take none.
-TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN", "TFT")
+TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN")
+# "TFT"
 
-
-def cell_dir(dataset: str, model: str, sampling: float, level: str) -> Path:
-    base = PROJECT_ROOT / "results" / f"results_{dataset}" / model / f"Sampling_{sampling_tag(sampling)}"
+def cell_dir(dataset: str, model: str, sampling: float, level: str, results_dir) -> Path:
+    base = PROJECT_ROOT / results_dir / f"results_{dataset}" / model / f"Sampling_{sampling_tag(sampling)}"
     if level != "L0":
         base = base / level
     return base
 
 
-def completed_runs(dataset: str, model: str, sampling: float, level: str) -> int:
+def completed_runs(dataset: str, model: str, sampling: float, level: str, results_dir) -> int:
     """How many runs of a cell already hold a metrics file."""
-    root = cell_dir(dataset, model, sampling, level)
+    root = cell_dir(dataset, model, sampling, level, results_dir)
     if not root.exists():
         return 0
     return sum(1 for child in root.iterdir()
                if child.is_dir() and (child / "model_metrics_summary.csv").exists())
 
 
-def command_for(dataset: str, model: str, sampling: float, level: str) -> list[str]:
+def command_for(dataset: str, model: str, sampling: float, level: str, results_dir) -> list[str]:
     # model -> (conda env, script, extra flags); the run is spawned in that env.
     specs = {
         "LightGBM": {"env": "statsml", "script": "models/models_statsml.py",
@@ -62,28 +62,29 @@ def command_for(dataset: str, model: str, sampling: float, level: str) -> list[s
                 "flags": ["--models", "TemporalFusionTransformer", "--epochs", "100"]},
         "Chronos2": {"env": "chronos", "script": "models/fmodel_chronos2.py", "flags": []},
         "Timestral": {"env": "chronos", "script": "models/fmodel_timestral.py", "flags": []},
+        "TimesFM3": {"env": "timesfm3", "script": "models/fmodel_timesfm3.py", "flags":[]}
     }
     spec = specs[model]
     parts = ["conda", "run", "--no-capture-output", "-n", spec["env"], "python", spec["script"],
              "--dataset", dataset, "--sampling_rates", f"{sampling:g}",
-             "--runs", str(runs_for(model)), "--exog_level", level]
+             "--runs", str(runs_for(model)), "--exog_level", level, "--results_dir", str(results_dir)]
     parts.extend(spec["flags"])
     # The parameters come from the tuning run of the *source* dataset, not of the
     # dataset being run: London borrows Zonnedael's, Belgium's eight series
     # borrow PV house 1's.  ``utils/tuning.py`` holds that map, and also decides
     # whether the file of this sampling rate exists or the 100 % search is
     # borrowed, so a cell with no source raises instead of training on defaults.
-    tuned, _tuned_at = tuned_resolution(PROJECT_ROOT / "results", model, dataset, level, sampling)
+    tuned, _tuned_at = tuned_resolution(PROJECT_ROOT/results_dir, model, dataset, level, sampling)
     if model in TUNED_MODELS and tuned.exists():
         parts.extend(["--params_json", str(tuned)])
     return parts
 
 
-def tuned_note(dataset: str, model: str, sampling: float, level: str):
+def tuned_note(dataset: str, model: str, sampling: float, level: str, results_dir):
     """One line saying where a cell's parameters come from, or why it has none."""
     if model not in TUNED_MODELS:
         return None
-    tuned, tuned_at = tuned_resolution(PROJECT_ROOT / "results", model, dataset, level, sampling)
+    tuned, tuned_at = tuned_resolution(PROJECT_ROOT / results_dir, model, dataset, level, sampling)
     if tuned_at is None:
         return f"no tuned parameters for {model} on this dataset: paper defaults"
     if float(tuned_at) != float(sampling):
@@ -93,7 +94,7 @@ def tuned_note(dataset: str, model: str, sampling: float, level: str):
 
 def main(argv=None) -> int:
     datasets = tuple(DATASET_WINDOWS)
-    model_order = ("LightGBM", "DeepNPTS", "TCN", "TFT", "Chronos2", "Timestral")
+    model_order = ("LightGBM", "DeepNPTS", "TCN", "TFT", "Chronos2", "Timestral", "TimesFM3")
     sampling_rates = (25.0, 100.0 / 3.0, 50.0, 100.0)
 
     parser = argparse.ArgumentParser(description="Run the covariate benchmark.")
@@ -103,22 +104,24 @@ def main(argv=None) -> int:
     parser.add_argument("--level", choices=list(("L0", "COV")), default="COV")
     parser.add_argument("--dry-run", action="store_true", help="Print the commands, run nothing.")
     parser.add_argument("--force", action="store_true", help="Re-run cells that are complete.")
+    parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")
     args = parser.parse_args(argv)
+    results_dir = args.results_dir.resolve()
 
     executed = skipped = 0
     for dataset in args.datasets:
         for model in args.models:
             for sampling in args.samplings:
-                done = completed_runs(dataset, model, sampling, args.level)
+                done = completed_runs(dataset, model, sampling, args.level, results_dir)
                 expected = runs_for(model)
                 label = f"{dataset}/{model}/Sampling_{sampling_tag(sampling)}/{args.level}"
                 if done >= expected and not args.force:
                     print(f"SKIP  {label}: {done}/{expected} runs on disk")
                     skipped += 1
                     continue
-                command = command_for(dataset, model, sampling, args.level)
+                command = command_for(dataset, model, sampling, args.level, results_dir)
                 print(f"RUN   {label} ({done}/{expected} runs)")
-                note = tuned_note(dataset, model, sampling, args.level)
+                note = tuned_note(dataset, model, sampling, args.level, results_dir)
                 if note:
                     print(f"      note: {note}")
                 print("      " + " ".join(command))

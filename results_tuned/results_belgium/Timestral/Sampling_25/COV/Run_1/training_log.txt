@@ -1,0 +1,31 @@
+2026-11-18 23:17:59,274 - INFO - Logger initialized at /home/cinnamoll/Code/Forecast-Models-Evaluation/results_tuned/results_belgium/Timestral/Sampling_25/COV/Run_1/training_log.txt
+2026-11-18 23:17:59,274 - INFO - ...Start Timestral forecasting...
+2026-11-18 23:17:59,274 - INFO - Forecasting PV
+2026-11-18 23:17:59,328 - INFO - PV_house_1: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:17:59,328 - WARNING - PV_house_1: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:18:29,342 - INFO - PV_house_1 - MAE: 0.0730, RMSE: 0.1253
+2026-11-18 23:18:29,953 - INFO - PV_house_2: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:18:29,953 - WARNING - PV_house_2: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:18:48,243 - INFO - PV_house_2 - MAE: 0.0708, RMSE: 0.1229
+2026-11-18 23:18:48,413 - INFO - PV_house_3: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:18:48,413 - WARNING - PV_house_3: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:19:10,729 - INFO - PV_house_3 - MAE: 0.0702, RMSE: 0.1227
+2026-11-18 23:19:10,968 - INFO - PV_house_4: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:19:10,969 - WARNING - PV_house_4: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:19:39,512 - INFO - PV_house_4 - MAE: 0.0742, RMSE: 0.1293
+2026-11-18 23:19:39,648 - INFO - Forecasting BESS
+2026-11-18 23:19:39,727 - INFO - BESS_house_1: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:19:39,730 - WARNING - BESS_house_1: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:20:06,342 - INFO - BESS_house_1 - MAE: 0.0767, RMSE: 0.1279
+2026-11-18 23:20:06,563 - INFO - BESS_house_2: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:20:06,563 - WARNING - BESS_house_2: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:20:36,770 - INFO - BESS_house_2 - MAE: 0.1146, RMSE: 0.1561
+2026-11-18 23:20:36,945 - INFO - BESS_house_3: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:20:36,946 - WARNING - BESS_house_3: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:20:59,119 - INFO - BESS_house_3 - MAE: 0.0994, RMSE: 0.1437
+2026-11-18 23:20:59,429 - INFO - BESS_house_4: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 8 static dropped (no per-series channel in this checkpoint)
+2026-11-18 23:20:59,429 - WARNING - BESS_house_4: static metadata is not representable and was dropped: static_pv_peak_kwp, static_bess_energy_kwh, static_bess_charge_kw, static_bess_discharge_kw, static_inverter_max_ac_kw, static_house_breaker_kva, static_bess_model, static_ac_phase
+2026-11-18 23:21:27,384 - INFO - BESS_house_4 - MAE: 0.0620, RMSE: 0.1120
+2026-11-18 23:21:27,510 - INFO - Saved model metrics to /home/cinnamoll/Code/Forecast-Models-Evaluation/results_tuned/results_belgium/Timestral/Sampling_25/COV/Run_1/model_metrics_summary.csv
+2026-11-18 23:21:27,818 - INFO - ...End Timestral forecasting...
+2026-11-18 23:21:27,821 - INFO - Forecasting completed in 208.54 seconds.

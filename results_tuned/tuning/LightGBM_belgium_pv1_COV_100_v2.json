@@ -1,0 +1,223 @@
+{
+  "model": "LightGBM",
+  "space_version": 2,
+  "tune_on": "belgium_pv1",
+  "transfer_to": [
+    "belgium_bess1",
+    "belgium_bess2",
+    "belgium_bess3",
+    "belgium_bess4",
+    "belgium_pv1",
+    "belgium_pv2",
+    "belgium_pv3",
+    "belgium_pv4"
+  ],
+  "level": "COV",
+  "sampling": 100.0,
+  "frequency": "15min",
+  "horizon": 192,
+  "validation_windows": [
+    [
+      7200,
+      7392
+    ],
+    [
+      7392,
+      7584
+    ],
+    [
+      7584,
+      7776
+    ],
+    [
+      7776,
+      7968
+    ],
+    [
+      7968,
+      8160
+    ],
+    [
+      8160,
+      8352
+    ],
+    [
+      8352,
+      8544
+    ]
+  ],
+  "windows_used": 7,
+  "budget": {
+    "max_trials": 30,
+    "max_hours_per_session": 1.5,
+    "max_steps": 100
+  },
+  "used": {
+    "trials": 30,
+    "hours": 0.0552,
+    "session_hours": 0.0562
+  },
+  "best_value_mae": 0.0662504744132021,
+  "best_params": {
+    "num_leaves": 25,
+    "learning_rate": 0.012753822311113864,
+    "n_estimators": 400,
+    "min_data_in_leaf": 161,
+    "feature_fraction": 0.7377815362157157,
+    "bagging_fraction": 0.6342558123624296,
+    "objective": "regression",
+    "bagging_freq": 1
+  },
+  "search_params": {
+    "num_leaves": 25,
+    "learning_rate": 0.012753822311113864,
+    "n_estimators": 400,
+    "min_data_in_leaf": 161,
+    "feature_fraction": 0.7377815362157157,
+    "bagging_fraction": 0.6342558123624296
+  },
+  "fixed_params": {
+    "objective": "regression",
+    "bagging_freq": 1
+  },
+  "best_trial": {
+    "number": 22,
+    "window_mae": [
+      0.03676459844997056,
+      0.06926018293466647,
+      0.06178138416104875,
+      0.08200649646781498,
+      0.09590921336321974,
+      0.049911158280918966,
+      0.06812028723477521
+    ],
+    "n_train": 8352
+  },
+  "boundary_hits": [],
+  "best_value_curve": [
+    [
+      0,
+      0.0719078223223442
+    ],
+    [
+      1,
+      0.0719078223223442
+    ],
+    [
+      2,
+      0.06930680532954804
+    ],
+    [
+      3,
+      0.06930680532954804
+    ],
+    [
+      4,
+      0.06775212132616373
+    ],
+    [
+      5,
+      0.06775212132616373
+    ],
+    [
+      6,
+      0.06775212132616373
+    ],
+    [
+      7,
+      0.06775212132616373
+    ],
+    [
+      8,
+      0.04715825543667479
+    ],
+    [
+      9,
+      0.04715825543667479
+    ],
+    [
+      10,
+      0.04715825543667479
+    ],
+    [
+      11,
+      0.04715825543667479
+    ],
+    [
+      12,
+      0.04715825543667479
+    ],
+    [
+      13,
+      0.04715825543667479
+    ],
+    [
+      14,
+      0.04715825543667479
+    ],
+    [
+      15,
+      0.04715825543667479
+    ],
+    [
+      16,
+      0.04177322641508376
+    ],
+    [
+      17,
+      0.04177322641508376
+    ],
+    [
+      18,
+      0.04177322641508376
+    ],
+    [
+      19,
+      0.04177322641508376
+    ],
+    [
+      20,
+      0.04177322641508376
+    ],
+    [
+      21,
+      0.04177322641508376
+    ],
+    [
+      22,
+      0.04177322641508376
+    ],
+    [
+      23,
+      0.04177322641508376
+    ],
+    [
+      24,
+      0.04177322641508376
+    ],
+    [
+      25,
+      0.04177322641508376
+    ],
+    [
+      26,
+      0.04177322641508376
+    ],
+    [
+      27,
+      0.04177322641508376
+    ],
+    [
+      28,
+      0.03945270739065505
+    ],
+    [
+      29,
+      0.03925982013436824
+    ]
+  ],
+  "saturated": false,
+  "error": null,
+  "selection_metric": "MAE on the 14-day validation block that ends at the test window; windows are anchored backwards so the last one touches test_start",
+  "strategy": "B: the four trainable models are tuned on three series and their parameters are transferred to the ten remaining cells mapped in utils/tuning.py; Chronos2, TimesFM3 and Timestral stay zero-shot"
+}
