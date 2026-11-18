@@ -537,7 +537,7 @@ def main(argv=None) -> int:
                         help="Gradient steps for DeepNPTS/TCN and epochs for TFT "
                              "(num_batches_per_epoch is fixed at 1).")
     parser.add_argument("--trials", type=int, default=30)
-    parser.add_argument("--hours", type=float, default=3,
+    parser.add_argument("--hours", type=float, default=2,
                         help="Wall-clock limit of one session; resuming adds more.")
     parser.add_argument("--seed", type=int, default=0, help="Sampler seed and model seed.")
     parser.add_argument("--gpu", type=int, default=-1)

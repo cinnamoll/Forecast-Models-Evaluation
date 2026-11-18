@@ -27,7 +27,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
-from utils.tuning import tuned_path
+from utils.tuning import tuned_resolution
+
+#: Models whose refit accepts ``--params_json``; the zero-shot ones take none.
+TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN", "TFT")
 
 
 def cell_dir(dataset: str, model: str, sampling: float, level: str) -> Path:
@@ -67,12 +70,25 @@ def command_for(dataset: str, model: str, sampling: float, level: str) -> list[s
     parts.extend(spec["flags"])
     # The parameters come from the tuning run of the *source* dataset, not of the
     # dataset being run: London borrows Zonnedael's, Belgium's eight series
-    # borrow PV house 1's.  ``utils/tuning.py`` holds that map, so a cell with no
-    # source raises instead of training on defaults.
-    tuned = tuned_path(PROJECT_ROOT / "results", model, dataset, level, sampling)
-    if model in ("LightGBM", "DeepNPTS", "TCN", "TFT") and tuned.exists():
+    # borrow PV house 1's.  ``utils/tuning.py`` holds that map, and also decides
+    # whether the file of this sampling rate exists or the 100 % search is
+    # borrowed, so a cell with no source raises instead of training on defaults.
+    tuned, _tuned_at = tuned_resolution(PROJECT_ROOT / "results", model, dataset, level, sampling)
+    if model in TUNED_MODELS and tuned.exists():
         parts.extend(["--params_json", str(tuned)])
     return parts
+
+
+def tuned_note(dataset: str, model: str, sampling: float, level: str):
+    """One line saying where a cell's parameters come from, or why it has none."""
+    if model not in TUNED_MODELS:
+        return None
+    tuned, tuned_at = tuned_resolution(PROJECT_ROOT / "results", model, dataset, level, sampling)
+    if tuned_at is None:
+        return f"no tuned parameters for {model} on this dataset: paper defaults"
+    if float(tuned_at) != float(sampling):
+        return f"parameters borrowed from the {tuned_at:g} % search ({tuned.name})"
+    return None
 
 
 def main(argv=None) -> int:
@@ -102,6 +118,9 @@ def main(argv=None) -> int:
                     continue
                 command = command_for(dataset, model, sampling, args.level)
                 print(f"RUN   {label} ({done}/{expected} runs)")
+                note = tuned_note(dataset, model, sampling, args.level)
+                if note:
+                    print(f"      note: {note}")
                 print("      " + " ".join(command))
                 if args.dry_run:
                     continue

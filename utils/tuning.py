@@ -75,15 +75,45 @@ def transfer_targets(source: str) -> list[str]:
     return sorted(cell for cell, origin in TRANSFER.items() if origin == source)
 
 
+def _tuned_file(root, model: str, source: str, level: str, sampling_rate: float,
+                space_version: int) -> Path:
+    return (Path(root) / "tuning"
+            / f"{model}_{source}_{level}_{sampling_tag(sampling_rate)}_v{space_version}.json")
+
+
+def tuned_resolution(root, model: str, dataset: str, level: str, sampling_rate: float,
+                     space_version: int = SPACE_VERSION):
+    """Path of the tuned JSON for a cell, plus the sampling rate it was tuned at.
+
+    A search run at one sampling rate is reused at the others.  The tuned values
+    are architecture and optimiser choices, which do not depend on the sampling
+    grid, and the published flow copied one JSON onto every tag for exactly this
+    reason.  So: prefer the file of the exact rate, otherwise fall back to 100 %,
+    which is the rate every search is run at.  ``(path, None)`` means "no tuned
+    parameters for this cell" and the caller trains on the paper's defaults.
+
+    The second element lets a caller (``scripts/run_benchmark.py``) say out loud
+    that a 50 % cell is running on parameters searched at 100 %.
+    """
+    source = tune_source(dataset)
+    exact = _tuned_file(root, model, source, level, sampling_rate, space_version)
+    if exact.exists():
+        return exact, float(sampling_rate)
+    fallback = _tuned_file(root, model, source, level, 100.0, space_version)
+    if fallback.exists():
+        return fallback, 100.0
+    return exact, None
+
+
 def tuned_path(root, model: str, dataset: str, level: str, sampling_rate: float,
                space_version: int = SPACE_VERSION) -> Path:
     """JSON path of the parameters a reported cell has to load.
 
     ``root`` is the results tree (``results/``); the tuning JSONs live in
-    ``<root>/tuning``.  The version suffix is part of the name on purpose: a
-    search whose space changed cannot reuse the old study or overwrite the old
-    file, so an old run stays readable next to the new one.
+    ``<root>/tuning``.  The sampling rate in the name is the one the search ran
+    at, which is not necessarily the one being run -- see ``tuned_resolution``.
+    The version suffix is part of the name on purpose: a search whose space
+    changed cannot reuse the old study or overwrite the old file, so an old run
+    stays readable next to the new one.
     """
-    source = tune_source(dataset)
-    return (Path(root) / "tuning"
-            / f"{model}_{source}_{level}_{sampling_tag(sampling_rate)}_v{space_version}.json")
+    return tuned_resolution(root, model, dataset, level, sampling_rate, space_version)[0]
