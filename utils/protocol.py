@@ -9,6 +9,9 @@ new run can always be placed next to the paper's table:
   minutes**.  For London the native step is 30 minutes, so 192 points cover four
   days; the loaders keep the paper's handling (see ``freq_for``) and this is
   recorded as a limitation rather than silently "fixed";
+* the frequency label handed to a model is derived from the dataset's **native**
+  step (``freq_for``), because the published labels were always the 15-minute
+  grid and on London that made every generated clock run at half speed;
 * the result tree keeps the paper's spelling, ``<Model>/Sampling_<tag>/Run_<n>``
   (statistical / TSFM) and ``<Model>/Sampling_<tag>/Epochs_<n>_<run>`` (the two
   framework scripts), so the new columns join the old ones.
@@ -56,16 +59,22 @@ def horizon_for(sampling_rate: float) -> int:
     return 192 // step_minutes(sampling_rate)
 
 
-def freq_for(sampling_rate: float, style: str = "min") -> str:
-    """Frequency label handed to the model.
+def freq_for(sampling_rate: float, dataset: str | None = None, style: str = "min") -> str:
+    """Frequency label handed to the model, on the dataset's **native** step.
 
-    The label is derived from the **paper's** 15-minute grid for every dataset,
-    which is what the original scripts do; London's 30-minute series therefore
-    advertises 15-minute steps at 100 %.  It is kept on purpose: the model's
-    internal calendar features are part of the published numbers, and changing
-    the label would move them.  Recorded as a limitation, not used as a fix.
+    ``freq_for(100, "london")`` is ``30min``: LCL is half-hourly, and labelling
+    it ``15min`` -- which is what every published run did, since the label was
+    the paper's 15-minute grid for every dataset -- makes each generated clock
+    run at half speed.  GluonTS builds its time features from
+    ``start + i * freq``, so on London that drifts by ~12 hours across 2013, and
+    any model that resamples onto the label (``fmodel_timegpt.py``) doubles the
+    series.  Datasets that are already on 15 minutes are unaffected.
+
+    ``dataset=None`` keeps the old 15-minute grid, which is what the model
+    scripts that never read the label still pass.
     """
-    minutes = int(15 * step_minutes(sampling_rate))
+    base = DATASET_STEP_MINUTES[dataset] if dataset else 15
+    minutes = int(base * step_minutes(sampling_rate))
     return f"{minutes}T" if style == "T" else f"{minutes}min"
 
 
@@ -122,16 +131,25 @@ def validation_windows(n_points: int, horizon: int, steps_per_day_: int,
 
     Returns ``[(train_end, eval_end)]``; rows ``< train_end`` are the only ones a
     trial may train on, so the last window ends exactly where the test begins.
+
+    The windows are anchored **backwards** from that edge.  Stepping forwards
+    from the start of the block (the previous behaviour) left the remainder on
+    the floor next to the test window whenever ``days * steps_per_day`` was not a
+    multiple of ``horizon`` -- on LCL the 14-day block is 672 points and three
+    192-point windows consume 576, so 96 points (two days) went unevaluated and
+    the window closest to the test block was never used.  Anchoring backwards
+    keeps every divisible case byte-identical and drops the remainder at the far
+    end instead.
     """
     if n_points <= horizon:
         raise ValueError(f"series of {n_points} points cannot hold horizon {horizon}")
     block = int(days) * steps_per_day_
     val_end = n_points - horizon
     val_start = max(horizon, val_end - block)
-    windows, start = [], val_start
-    while start + horizon <= val_end:
-        windows.append((start, start + horizon))
-        start += horizon
+    windows, end = [], val_end
+    while end - horizon >= val_start:
+        windows.append((end - horizon, end))
+        end -= horizon
     if not windows:
         raise ValueError("validation block is shorter than one horizon")
-    return windows
+    return list(reversed(windows))

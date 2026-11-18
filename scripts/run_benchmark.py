@@ -27,6 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
+from utils.tuning import tuned_path
 
 
 def cell_dir(dataset: str, model: str, sampling: float, level: str) -> Path:
@@ -64,8 +65,12 @@ def command_for(dataset: str, model: str, sampling: float, level: str) -> list[s
              "--dataset", dataset, "--sampling_rates", f"{sampling:g}",
              "--runs", str(runs_for(model)), "--exog_level", level]
     parts.extend(spec["flags"])
-    tuned = PROJECT_ROOT / "results" / "tuning" / f"{model}_{dataset}_{level}_{sampling_tag(sampling)}.json"
-    if model in ("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT") and tuned.exists():
+    # The parameters come from the tuning run of the *source* dataset, not of the
+    # dataset being run: London borrows Zonnedael's, Belgium's eight series
+    # borrow PV house 1's.  ``utils/tuning.py`` holds that map, so a cell with no
+    # source raises instead of training on defaults.
+    tuned = tuned_path(PROJECT_ROOT / "results", model, dataset, level, sampling)
+    if model in ("LightGBM", "DeepNPTS", "TCN", "TFT") and tuned.exists():
         parts.extend(["--params_json", str(tuned)])
     return parts
 

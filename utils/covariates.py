@@ -312,6 +312,12 @@ def shift_past_only(frame: pd.DataFrame, roles: dict, points: int) -> pd.DataFra
     so a measured covariate must be the value a forecaster had at the origin:
     ``t - horizon``.  Without the shift the model would read tomorrow's weather
     while predicting tomorrow.
+
+    Call this **after** subsampling.  ``points`` is a number of rows of ``frame``,
+    so shifting a full-resolution frame and subsampling afterwards moves the
+    columns by fewer steps than the horizon: at 33 % every ``horizon`` points of
+    a 192-point horizon lands on 21 of the 64 subsampled steps actually
+    forecast, which leaks the remaining two thirds of the window.
     """
     if points <= 0 or not roles["past_only"]:
         return frame

@@ -21,7 +21,7 @@ from utils.metrics import calculate_metrics, forecast_plot_and_csv, plot_model_m
 from utils.dataset_config import DatasetBelgiumNF, DatasetGermanyNF, DatasetLondonNF, DatasetZonnedaelNF
 from utils.covariates import roles_for, scale_covariates
 from utils.device import GPU_HELP, uses_gpu
-from utils.protocol import horizon_for, run_dir
+from utils.protocol import freq_for, horizon_for, run_dir
 from gluonts.mx.model.seq2seq import MQRNNEstimator
 from gluonts.mx.model.seq2seq import MQCNNEstimator
 from gluonts.mx.model.deep_factor import DeepFactorEstimator
@@ -234,7 +234,10 @@ def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, model_na
     metrics = []
     start_time = time.time()
     forecast_horizon = horizon_for(sampling_rate)
-    freq = f"{int(15 * (100 / sampling_rate))}min"
+    # The label follows the dataset's native step: LCL is half-hourly, and the
+    # published runs labelled it 15 minutes, which made the estimator's time
+    # features (built from ``start + i * freq``) run at half speed.
+    freq = freq_for(sampling_rate, dataset_name)
     logging.info(f"...Start training using {model_name} with {sampling_rate}% sampling rate, covariate level {level}...")
     if dataset_name == "belgium":
         logging.info("Training PV models")
