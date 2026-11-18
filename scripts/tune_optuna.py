@@ -13,8 +13,8 @@ Spaces are the ones of ``plan/plan_updated.md`` section 5.  The contract:
   its space is reported instead of being silently transferred.
 
 Each model family is imported lazily, so the script runs in the environment that
-holds the model (``statsml`` for LightGBM, ``neuralforecast`` for DeepNPTS /
-PatchTST / TCN, ``gluonts`` for TFT), the same way ``models/`` does.
+holds the model (``statsml`` for LightGBM, ``neuralforecast`` for DeepNPTS / TCN, 
+``gluonts`` for TFT), the same way ``models/`` does.
 
 Example
 -------
@@ -47,9 +47,6 @@ from models.models_gluonts import to_gluonts_dataset, covariate_spec, split_para
 from gluonts.evaluation.backtest import make_evaluation_predictions
 from gluonts.mx.trainer import Trainer
 from utils.device import uses_gpu
-
-
-# --------------------------------------------------------------------- spaces
 
 def suggest_lightgbm(trial) -> dict:
     return {
@@ -135,6 +132,7 @@ NUMERIC_BOUNDS = {
             "learning_rate": (1e-4, 1e-2)},
     "TFT": {"hidden_dim": (16, 64), "dropout_rate": (0.0, 0.3), "learning_rate": (1e-4, 1e-2)},
 }
+
 CATEGORICAL_CHOICES = {
     "DeepNPTS": {"hidden_size": (32, 64, 128, 256), "batch_size": (32, 64, 128)},
     "TCN": {"kernel_size": (2, 3), "dilations_depth": (5, 6, 7, 8)},
@@ -347,13 +345,10 @@ def time_limit_callback(max_hours: float):
 
     return callback
 
-
-# ----------------------------------------------------------------------- main
-
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Optuna search for one model (plan section 5).")
     parser.add_argument("--model", required=True,
-                        choices=list(("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT")))
+                        choices=list(("LightGBM", "DeepNPTS", "TCN", "TFT")))
     parser.add_argument("--dataset", required=True, choices=["london", "germany", "belgium"])
     parser.add_argument("--level", default="COV", choices=list(("L0", "COV")))
     parser.add_argument("--sampling", type=float, default=100.0)
