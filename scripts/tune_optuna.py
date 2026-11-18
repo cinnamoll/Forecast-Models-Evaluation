@@ -34,7 +34,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from neuralforecast import NeuralForecast
-import mxnet as mx
 
 if str(Path(__file__).resolve().parents[1]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -44,8 +43,6 @@ from utils.protocol import horizon_for, sampling_tag, steps_per_day, validation_
 from utils.covariates import scale_covariates
 from utils.device import lightning_device_config
 from models.models_gluonts import to_gluonts_dataset, covariate_spec, split_params
-from gluonts.evaluation.backtest import make_evaluation_predictions
-from gluonts.mx.trainer import Trainer
 from utils.device import uses_gpu
 
 def suggest_lightgbm(trial) -> dict:
@@ -247,6 +244,10 @@ def neuralforecast_objective(model_class, params, frame, horizon, freq, windows,
 
 
 def gluonts_objective(model_class, params, frame, horizon, freq, windows, epochs, seed, gpu):
+    import mxnet as mx
+    from gluonts.evaluation.backtest import make_evaluation_predictions
+    from gluonts.mx.trainer import Trainer
+    
     """MAE of the first validation window for the GluonTS TFT estimator."""
     train_end, eval_end = windows[0]
     window_frame = frame.iloc[:eval_end].reset_index(drop=True)
