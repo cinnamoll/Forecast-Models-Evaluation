@@ -24,3 +24,10 @@
 2026-11-18 23:35:50,059 - INFO - Training TCN PV_house_4 model on 2848 samples (33.3333% of original training set)...
 2026-11-18 23:35:50,059 - INFO - TCN receptive field: 32 steps (horizon 64)
 2026-11-18 23:35:50,060 - INFO - TCN tuned parameters: {'kernel_size': 2, 'encoder_hidden_size': 128, 'context_size': 20, 'decoder_layers': 1, 'learning_rate': 0.00020968874118585784, 'batch_size': 32, 'dilations': [1, 2, 4, 8, 16, 32]}
+2026-11-18 23:37:41,132 - INFO - PV_house_4 - MAE: 0.0660, RMSE: 0.1173
+2026-11-18 23:37:41,367 - INFO - Training BESS models
+2026-11-18 23:37:41,440 - INFO - Using random seed: 1795019861
+2026-11-18 23:37:41,442 - INFO - TCN covariate lists: {'hist_exog_list': 8, 'futr_exog_list': 6, 'stat_exog_list': 8}
+2026-11-18 23:37:41,456 - INFO - Training TCN BESS_house_1 model on 2848 samples (33.3333% of original training set)...
+2026-11-18 23:37:41,456 - INFO - TCN receptive field: 32 steps (horizon 64)
+2026-11-18 23:37:41,456 - INFO - TCN tuned parameters: {'kernel_size': 2, 'encoder_hidden_size': 128, 'context_size': 20, 'decoder_layers': 1, 'learning_rate': 0.00020968874118585784, 'batch_size': 32, 'dilations': [1, 2, 4, 8, 16, 32]}

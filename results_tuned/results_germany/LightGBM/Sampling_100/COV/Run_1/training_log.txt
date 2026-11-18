@@ -5,3 +5,7 @@
 2026-11-18 23:35:29,579 - INFO - lagged 7 past-only covariate(s) by 192 steps: temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
 2026-11-18 23:35:29,580 - INFO - Training LightGBM model for germany_load on 8544 samples (100.0% of original data)...
 2026-11-18 23:35:29,581 - INFO - LightGBM tuned parameters: {'num_leaves': 21, 'learning_rate': 0.016727476035243674, 'n_estimators': 100, 'min_data_in_leaf': 187, 'feature_fraction': 0.7110687445336494, 'bagging_fraction': 0.7442390173292651, 'objective': 'regression', 'bagging_freq': 1}
+2026-11-18 23:37:38,391 - INFO - germany_load (LightGBM) - MAE: 0.0633, RMSE: 0.1384
+2026-11-18 23:37:38,902 - INFO - Saved model metrics to /home/cinnamoll/Code/Forecast-Models-Evaluation/results_tuned/results_germany/LightGBM/Sampling_100/COV/Run_1/model_metrics_summary.csv
+2026-11-18 23:37:39,212 - INFO - Run 1: End training LightGBM models.
+2026-11-18 23:37:39,212 - INFO - Training completed in 129.78 seconds.
