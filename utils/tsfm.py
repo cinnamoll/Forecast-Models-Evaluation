@@ -166,9 +166,23 @@ def timestral_arguments(payload: dict) -> dict:
     return arguments
 
 
+def to_numpy(values, dtype=float):
+    """``Tensor`` or array -> host ``numpy`` array.
+
+    A CUDA tensor cannot go through ``np.asarray`` (``TypeError: can't convert
+    cuda:0 device type tensor to numpy``), so every point-forecast extraction
+    goes through here: the same code then works on CPU and on GPU.
+    """
+    if hasattr(values, "detach"):
+        values = values.detach()
+        if hasattr(values, "cpu"):
+            values = values.cpu()
+    return np.asarray(values, dtype=dtype)
+
+
 def point_from_quantiles(quantiles, level_index: int = 1):
     """Median row of a ``(n_variates, horizon, n_levels)`` quantile block."""
-    values = np.asarray(quantiles, dtype=float)
+    values = to_numpy(quantiles)
     if values.ndim == 3:
         return values[0, :, level_index]
     if values.ndim == 2:

@@ -19,8 +19,9 @@ Which models can be explained, and how:
   game has covariate players only.  That is reported, not hidden.
 * ``TFT`` — the GluonTS predictor accepts a new ``ListDataset`` per coalition, so
   the game is clean without refitting.
-* ``Chronos2`` / ``Timestral`` — zero-shot, covariates are plain arrays, so a
-  coalition is a new input mapping.
+* ``Chronos2`` / ``Timestral`` / ``TimesFM3`` — zero-shot, covariates are plain
+  arrays, so a coalition is just a new input mapping.  These three are the
+  default model set: ``plan/scripts.md`` runs the covariate flow on them only.
 * ``DeepNPTS`` / ``PatchTST`` / ``TCN`` — NeuralForecast freezes the context and
   ``hist_exog`` into the fitted dataset, so a clean game needs a refit per
   coalition.  That is enabled explicitly with ``--allow-refit`` (and then the
@@ -58,8 +59,16 @@ from utils.covariates import group_columns, roles_for, scale_covariates, shift_p
 from utils.protocol import horizon_for, sampling_tag,steps_per_day
 from utils.timeshap import (apply_coalition, additivity_residual, covariate_players,
                             enumerate_game, group_shares, periodic_background,
-                            shapley_exact, shares_by_player, signed_by_player,
-                            temporal_players, temporal_pruning_report)
+                            players_per_variable, shapley_exact, shares_by_player,
+                            signed_by_player, temporal_players, temporal_pruning_report)
+
+#: Models whose explanation needs no refit: a new input mapping for the zero-shot
+#: checkpoints, exact TreeSHAP for LightGBM.
+CLEAN_GAME_MODELS = ("LightGBM", "TFT", "Chronos2", "Timestral", "TimesFM3")
+
+#: Default model set: the covariate flow of ``plan/scripts.md`` covers these three
+#: zero-shot checkpoints only.  Nothing is trained, so there is nothing to tune.
+DEFAULT_MODELS = ("Chronos2", "Timestral", "TimesFM3")
 
 
 def series_prefix(series: str) -> str:
@@ -112,10 +121,13 @@ def scaled_frame(frame: pd.DataFrame, level: str, horizon: int):
 
 
 def build_players(frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
-                  include_temporal: bool = True):
-    """Temporal players + one player per covariate block."""
+                  include_temporal: bool = True, per_variable: bool = False):
+    """Temporal players + one player per covariate block (or per column)."""
     n_context = len(frame) - horizon
     players = temporal_players(n_context, per_day) if include_temporal else []
+    if per_variable:
+        players += players_per_variable(frame, roles, n_context)
+        return players
     groups = group_columns([c for c in frame.columns if c not in ("unique_id", "ds", "y")])
     players += covariate_players(frame, groups, roles, n_context)
     return players
@@ -200,7 +212,7 @@ def timestral_predictor(frame: pd.DataFrame, roles: dict, horizon: int, gpu: int
     from timestral import TimestralForecaster
 
     from utils.device import torch_device
-    from utils.tsfm import prepare_inputs, timestral_arguments
+    from utils.tsfm import prepare_inputs, timestral_arguments, to_numpy
 
     forecaster = TimestralForecaster.from_pretrained("mistralai/Timestral-123M",
                                                      device=torch_device(gpu))
@@ -208,7 +220,34 @@ def timestral_predictor(frame: pd.DataFrame, roles: dict, horizon: int, gpu: int
     def predict(perturbed: pd.DataFrame) -> np.ndarray:
         payload = prepare_inputs(perturbed, roles, level, horizon)
         forecast = forecaster.forecast(prediction_length=horizon, **timestral_arguments(payload))
-        return np.asarray(forecast.median, dtype=float).reshape(-1)[:horizon]
+        return to_numpy(forecast.median).reshape(-1)[:horizon]
+
+    return predict
+
+
+def timesfm3_predictor(frame: pd.DataFrame, roles: dict, horizon: int, gpu: int, level: str,
+                       model_id: str = "google/timesfm-3.0-pytorch", batch_size: int = 4):
+    """TimesFM 3: covariates are extra variates, so a coalition is a new stack.
+
+    ``scale_categorical`` is on because this checkpoint has no integer embedding
+    channel: the calendar codes are min-max scaled like any other covariate
+    (``utils/tsfm.timesfm3_covariates``).  Static metadata has no channel and is
+    dropped by ``prepare_inputs`` before it ever reaches the game.
+    """
+    from timesfm3 import ModelConfig, TimesFM3Evaluator
+
+    from utils.device import torch_device
+    from utils.tsfm import prepare_inputs, timesfm3_covariates, to_numpy
+
+    forecaster = TimesFM3Evaluator(ModelConfig(
+        checkpoint_path=model_id, per_core_batch_size=batch_size, device=torch_device(gpu)))
+
+    def predict(perturbed: pd.DataFrame) -> np.ndarray:
+        payload = prepare_inputs(perturbed, roles, level, horizon, scale_categorical=True)
+        output = forecaster.predict(
+            context=payload["context"], horizon=horizon, return_quantiles=True,
+            use_symmetric_averaging=True, make_positive=True, **timesfm3_covariates(payload))
+        return to_numpy(output.forecast).reshape(-1)[:horizon]
 
     return predict
 
@@ -260,33 +299,31 @@ def neuralforecast_refit_predictor(frame: pd.DataFrame, roles: dict, horizon: in
 
 def make_predictor(model: str, frame: pd.DataFrame, roles: dict, horizon: int, freq: str,
                    epochs: int, gpu: int, params: dict | None, level: str):
-    if model == "LightGBM":
-        return lightgbm_predictor(frame, horizon, params), False
-    if model == "TFT":
-        return tft_predictor(frame, roles, horizon, freq, epochs, gpu, params, level), True
     if model == "Chronos2":
         return chronos2_predictor(frame, roles, horizon, gpu, level), True
     if model == "Timestral":
         return timestral_predictor(frame, roles, horizon, gpu, level), True
+    if model == "TimesFM3":
+        return timesfm3_predictor(frame, roles, horizon, gpu, level), True
     return neuralforecast_refit_predictor(frame, roles, horizon, freq, epochs, gpu, params, model), False
-
-
-# ----------------------------------------------------------------------- driver
 
 def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
             mode: str, predict, include_temporal: bool, out_dir: Path,
-            sampling: float, level: str) -> dict:
-    players = build_players(frame, roles, horizon, per_day, include_temporal=include_temporal)
-    if len(players) > 12:
+            sampling: float, level: str, per_variable: bool = False,
+            max_players: int = 12) -> dict:
+    players = build_players(frame, roles, horizon, per_day, include_temporal=include_temporal,
+                            per_variable=per_variable)
+    if len(players) > max_players:
         raise ValueError(f"{model}: {len(players)} players -> {2 ** len(players)} coalitions; "
-                         "group the covariates further or lower --max-players")
+                         f"raise --max-players above {max_players} only if that cost is affordable, "
+                         "or drop --per-variable")
     n_context = len(frame) - horizon
     background = periodic_background(frame, per_day, train_end=n_context)
 
     started = time.time()
     values = enumerate_game(
         lambda active: predict(apply_coalition(frame, background, players, active, mode=mode)),
-        players)
+        players, max_players=max_players)
     phi, base, prediction = shapley_exact(values, players)
     residual = additivity_residual(phi, base, prediction)
     elapsed = time.time() - started
@@ -322,7 +359,7 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
         "coalitions": 2 ** len(players), "estimator": "exact (full enumeration)",
         "mode": mode, "horizon": horizon, "context": n_context,
         "additivity_residual": residual, "seconds": round(elapsed, 3),
-        "temporal_players": include_temporal,
+        "temporal_players": include_temporal, "per_variable": per_variable,
     }, indent=2), encoding="utf-8")
 
     logging.getLogger("timeshap").info("%s: %d players, %d coalitions in %.1fs, residual %.2e",
@@ -341,11 +378,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="TimeSHAP explanation of the covariate models.")
     parser.add_argument("--dataset", required=True, choices=["belgium", "germany", "london", "zonnedael"])
     parser.add_argument("--series", required=True)
-    parser.add_argument("--models", nargs="+",
-                        choices=list(("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT",
-                                      "Chronos2", "Timestral")),
-                        default=list(("LightGBM", "DeepNPTS", "PatchTST", "TCN", "TFT",
-                                      "Chronos2", "Timestral")))
+    parser.add_argument("--models", nargs="+", choices=list(("Chronos2", "Timestral", "TimesFM3")), default=list(DEFAULT_MODELS))
     parser.add_argument("--level", default="COV", choices=list(("L0", "COV")))
     parser.add_argument("--sampling", type=float, default=100.0)
     parser.add_argument("--mode", choices=["background", "mean", "zero"], default="background",
@@ -358,6 +391,17 @@ def main(argv=None) -> int:
                         help="Explain DeepNPTS/PatchTST/TCN by refitting per coalition "
                              "(covariate players only; expensive but clean).")
     parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument("--covariate-only", action="store_true",
+                        help="Game over the covariate blocks only, with the target history held fixed "
+                             "(32 coalitions instead of 512 at 5 blocks).  The default for the "
+                             "13-series sweep in plan/scripts.md: a measured forward here costs "
+                             "4-24 s, so the full 4+G game is hours per cell.")
+    parser.add_argument("--per-variable", action="store_true",
+                        help="One player per covariate column instead of one per physical block "
+                             "(12 columns -> 4096 coalitions here, so pair it with --covariate-only "
+                             "unless the GPU budget is large).")
+    parser.add_argument("--max-players", type=int, default=12,
+                        help="Refuse a game larger than this many players (2^N coalitions).")
     parser.add_argument("--dry-run", action="store_true", help="Print the player set and exit.")
     args = parser.parse_args(argv)
 
@@ -368,7 +412,9 @@ def main(argv=None) -> int:
     scaled, roles = scaled_frame(frame, args.level, horizon)
     freq = f"{int(15 * (100 / args.sampling))}min"
 
-    players = build_players(scaled, roles, horizon, per_day, include_temporal=True)
+    players = build_players(scaled, roles, horizon, per_day,
+                            include_temporal=not args.covariate_only,
+                            per_variable=args.per_variable)
     logging.getLogger("timeshap").info(
         "%s/%s: %d points, horizon %d, %d players -> %d coalitions",
         args.dataset, args.series, len(scaled), horizon, len(players), 2 ** len(players))
@@ -386,21 +432,22 @@ def main(argv=None) -> int:
         if params_path.exists():
             payload = json.loads(params_path.read_text(encoding="utf-8"))
             params = dict(payload.get("best_params", payload))
-        include_temporal = model != "LightGBM"   # a direct regressor has no lag
-        if model not in ("LightGBM", "TFT", "Chronos2", "Timestral") and not args.allow_refit:
+        include_temporal = model != "LightGBM" and not args.covariate_only   # a direct regressor has no lag
+        if model not in CLEAN_GAME_MODELS and not args.allow_refit:
             notes[model] = ("skipped: NeuralForecast freezes the context and hist_exog into the "
                             "fitted dataset, so a clean coalition game needs --allow-refit")
             logging.getLogger("timeshap").warning(
                 "%s skipped (no clean game without refit); pass --allow-refit", model)
             continue
-        if model not in ("LightGBM", "TFT", "Chronos2", "Timestral"):
+        if model not in CLEAN_GAME_MODELS:
             include_temporal = False
             notes[model] = "refit per coalition; covariate players only"
         try:
             predict, _ = make_predictor(model, scaled, roles, horizon, freq, args.epochs,
                                         args.gpu, params, args.level)
             result = explain(model, scaled, roles, horizon, per_day, args.mode, predict,
-                             include_temporal, out_dir / model, args.sampling, args.level)
+                             include_temporal, out_dir / model, args.sampling, args.level,
+                             per_variable=args.per_variable, max_players=args.max_players)
         except Exception as error:  # one model must not kill the whole report
             logging.getLogger("timeshap").error("%s failed: %s", model, error, exc_info=True)
             notes[model] = f"failed: {error}"

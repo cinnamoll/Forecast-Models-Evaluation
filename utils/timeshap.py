@@ -34,8 +34,6 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class Player:
-    """A coalition player: a name and the rows (and columns) it owns."""
-
     name: str
     positions: Tuple[int, ...]
     columns: Tuple[str, ...]
@@ -82,6 +80,36 @@ def covariate_players(frame: pd.DataFrame, groups: Dict[str, Sequence[str]],
             continue
         rows = tuple(range(len(frame))) if all(c in known for c in present) else tuple(range(n_context))
         players.append(Player(name=name, positions=rows, columns=present, kind="covariate"))
+    return players
+
+
+def players_per_variable(frame: pd.DataFrame, roles: Dict[str, Sequence[str]],
+                         n_context: int) -> List[Player]:
+    """One player per covariate column, instead of one per physical block.
+
+    ``covariate_players`` groups columns (``group_columns``) so a player is "the
+    calendar" rather than "the hour code".  Splitting is the answer to the other
+    question - which *single* column the forecast leans on - and it costs a much
+    larger game: ``C`` columns need ``2^C`` coalitions where the grouped game
+    needs ``2^blocks``.
+
+    Two caveats are inherent to the perturbation, not to this function:
+
+    * Columns that are deterministic functions of each other (``quarter_hour`` is
+      ``hour * 4 + minute // 15``) are never switched off independently in a
+      coalition, so no Shapley game can separate them: the credit between them is
+      arbitrary and must not be read as evidence about either one.
+    * The rows a column owns follow its role, exactly as in the block game: a
+      known-future column owns the horizon rows too, a past-only column only the
+      context.
+    """
+    known = set(roles.get("known_future", []))
+    players = []
+    for column in frame.columns:
+        if column in ("unique_id", "ds", "y"):
+            continue
+        rows = tuple(range(len(frame))) if column in known else tuple(range(n_context))
+        players.append(Player(name=column, positions=rows, columns=(column,), kind="covariate"))
     return players
 
 
@@ -146,12 +174,13 @@ def apply_coalition(frame: pd.DataFrame, background: pd.DataFrame, players: Sequ
     return perturbed
 
 
-def enumerate_game(payoff: Callable[[Tuple[str, ...]], np.ndarray],
-                   players: Sequence[Player]) -> Dict[frozenset, np.ndarray]:
-    """Evaluate ``f`` on all ``2^N`` coalitions (``N <= 12``)."""
-    if len(players) > 12:
+def enumerate_game(payoff: Callable[[Tuple[str, ...]], np.ndarray], players: Sequence[Player],
+                   max_players: int = 12) -> Dict[frozenset, np.ndarray]:
+    """Evaluate ``f`` on all ``2^N`` coalitions (``N <= max_players``)."""
+    if len(players) > max_players:
         raise ValueError(f"{len(players)} players need {2 ** len(players)} coalitions; "
-                         "group the covariates further or sample the game")
+                         f"raise --max-players above {max_players} only if that cost is affordable, "
+                         "group the covariates, or sample the game")
     names = [p.name for p in players]
     values: Dict[frozenset, np.ndarray] = {}
     for size in range(len(names) + 1):
@@ -234,4 +263,5 @@ def temporal_pruning_report(phi: np.ndarray, players: Sequence[Player]) -> pd.Da
             continue
         rows.append({"player": player.name, "steps": player.size,
                      "mean_abs_contribution": float(np.abs(phi[index]).mean())})
-    return pd.DataFrame(rows)
+    # Keep the header when the history players are held fixed (covariate-only game).
+    return pd.DataFrame(rows, columns=["player", "steps", "mean_abs_contribution"])

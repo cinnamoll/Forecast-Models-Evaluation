@@ -14,7 +14,7 @@ from utils.dataset_config import DatasetBelgiumNF, DatasetGermanyNF, DatasetLond
 from utils.covariates import roles_for
 from utils.device import GPU_HELP, torch_device
 from utils.protocol import horizon_for, run_dir
-from utils.tsfm import prepare_inputs, timestral_arguments
+from utils.tsfm import prepare_inputs, timestral_arguments, to_numpy
 import time
 import gc
 import torch
@@ -62,7 +62,7 @@ def timestral_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon,
 
     forecast = forecaster.forecast(prediction_length=forecast_horizon,
                                    **timestral_arguments(payload))
-    y_pred = np.asarray(forecast.median, dtype=float).reshape(-1)[:forecast_horizon]
+    y_pred = to_numpy(forecast.median).reshape(-1)[:forecast_horizon]
     y_true = test_df["y"].values
     mae, rmse = calculate_metrics(y_pred, y_true)
     logging.info(f"{model_name} - MAE: {mae:.4f}, RMSE: {rmse:.4f}")

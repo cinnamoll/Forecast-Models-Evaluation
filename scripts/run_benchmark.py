@@ -29,9 +29,17 @@ if str(PROJECT_ROOT) not in sys.path:
 from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
 from utils.tuning import tuned_resolution
 
+#: Covariate flow of ``plan/scripts.md``: three zero-shot TSFMs.  Nothing is
+#: trained and nothing is tuned — the covariate block is an input mapping, so a
+#: COV cell is one forward pass of the checkpoint.  LightGBM, DeepNPTS, TCN and
+#: TFT are deliberately out of this flow.
+COV_MODELS = ("Chronos2", "Timestral", "TimesFM3")
+
 #: Models whose refit accepts ``--params_json``; the zero-shot ones take none.
-TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN")
-# "TFT"
+#: Empty under the current plan: no model of the covariate flow is trained, so no
+#: cell loads a tuned parameter file.  ``scripts/tune_optuna.py`` still exists for
+#: the trainable models if they ever come back into scope.
+TUNED_MODELS = ()
 
 def cell_dir(dataset: str, model: str, sampling: float, level: str, results_dir) -> Path:
     base = PROJECT_ROOT / results_dir / f"results_{dataset}" / model / f"Sampling_{sampling_tag(sampling)}"
@@ -94,23 +102,31 @@ def tuned_note(dataset: str, model: str, sampling: float, level: str, results_di
 
 def main(argv=None) -> int:
     datasets = tuple(DATASET_WINDOWS)
-    model_order = ("LightGBM", "DeepNPTS", "TCN", "TFT", "Chronos2", "Timestral", "TimesFM3")
     sampling_rates = (25.0, 100.0 / 3.0, 50.0, 100.0)
 
     parser = argparse.ArgumentParser(description="Run the covariate benchmark.")
-    parser.add_argument("--models", nargs="+", choices=list(model_order), default=list(model_order))
+    parser.add_argument("--models", nargs="+", choices=list(COV_MODELS), default=None,
+                        help="Default: COV_MODELS at --level COV, every model at --level L0.")
     parser.add_argument("--datasets", nargs="+", choices=list(datasets), default=list(datasets))
     parser.add_argument("--samplings", nargs="+", type=float, default=list(sampling_rates))
     parser.add_argument("--level", choices=list(("L0", "COV")), default="COV")
-    parser.add_argument("--dry-run", action="store_true", help="Print the commands, run nothing.")
     parser.add_argument("--force", action="store_true", help="Re-run cells that are complete.")
+    parser.add_argument("--dry-run", action="store_true", help="Print the planned commands and exit.")
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")
     args = parser.parse_args(argv)
     results_dir = args.results_dir.resolve()
 
+    # The covariate flow runs the zero-shot checkpoints only; the trainable models
+    # stay in the L0 flow that reproduces the paper's table.
+    models = list(args.models) 
+    off_plan = [model for model in models]
+    if off_plan:
+        parser.error(f"--level {args.level} runs only {'/'.join(COV_MODELS)}; "
+                     f"out of scope: {', '.join(off_plan)}")
+
     executed = skipped = 0
     for dataset in args.datasets:
-        for model in args.models:
+        for model in models:
             for sampling in args.samplings:
                 done = completed_runs(dataset, model, sampling, args.level, results_dir)
                 expected = runs_for(model)
@@ -126,6 +142,7 @@ def main(argv=None) -> int:
                     print(f"      note: {note}")
                 print("      " + " ".join(command))
                 if args.dry_run:
+                    executed += 1
                     continue
                 result = subprocess.run(command, cwd=str(PROJECT_ROOT))
                 if result.returncode != 0:

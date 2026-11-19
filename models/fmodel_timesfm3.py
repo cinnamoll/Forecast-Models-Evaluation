@@ -14,7 +14,7 @@ from utils.dataset_config import DatasetBelgiumNF, DatasetGermanyNF, DatasetLond
 from utils.covariates import roles_for
 from utils.device import GPU_HELP, torch_device
 from utils.protocol import freq_for, horizon_for, run_dir, window
-from utils.tsfm import prepare_inputs, timesfm3_covariates
+from utils.tsfm import prepare_inputs, timesfm3_covariates, to_numpy
 import time
 import gc
 import torch
@@ -70,7 +70,7 @@ def timesfm3_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon, 
     # ``forecast`` is the median quantile, which is the point forecast of the
     # model card; ``quantiles`` stays unused here but the call above asks for it
     # so the evaluator does not fall back to a mean of the quantiles.
-    y_pred = np.asarray(output.forecast, dtype=float).reshape(-1)[:forecast_horizon]
+    y_pred = to_numpy(output.forecast).reshape(-1)[:forecast_horizon]
     y_true = test_df["y"].to_numpy(dtype=float)
     mae, rmse = calculate_metrics(y_pred, y_true)
     logging.info(f"{model_name} - MAE: {mae:.4f}, RMSE: {rmse:.4f}")
