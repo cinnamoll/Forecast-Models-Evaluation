@@ -55,9 +55,8 @@ WEATHER_COLUMNS = {
 }
 
 CALENDAR_COLUMNS = ("quarter_hour", "hour", "minute", "dayofweek", "is_weekend")
+TIMESHAP_COLUMNS = ("hour", "dayofweek", "humidity", "ghi", "cloud_cover")
 
-
-# --------------------------------------------------------------------- calendar
 
 def calendar_frame(index: pd.DatetimeIndex) -> pd.DataFrame:
     """The paper's day/hour block, one column per feature.
@@ -253,6 +252,25 @@ def roles_for(frame: pd.DataFrame) -> dict:
     }
 
 
+def restrict_columns(frame: pd.DataFrame, roles: dict, keep) -> tuple:
+    """Keep ``keep`` covariate columns and re-derive the roles.
+
+    Returns ``(frame, roles)`` with the ``unique_id``/``ds``/``y`` labels intact,
+    so a caller can shrink the covariate set and then build the game or the model
+    input from the result.  The roles are recomputed rather than filtered, because
+    a dropped column must disappear from ``known_future``/``past_only``/
+    ``categorical`` alike - otherwise ``prepare_inputs`` would still ask for it.
+    """
+    missing = [column for column in keep if column not in frame.columns]
+    if missing:
+        raise KeyError(f"covariates not in the frame: {missing} "
+                       f"(available: {[c for c in frame.columns if c not in ('unique_id', 'ds', 'y')]})")
+    wanted = set(keep)
+    labels = [c for c in ("unique_id", "ds", "y") if c in frame.columns]
+    pruned = frame[labels + [c for c in frame.columns if c in wanted]]
+    return pruned, roles_for(pruned)
+
+
 def build_covariates(dataset: str, entity: str, index: pd.DatetimeIndex, task: str,
                      level: str = "COV", house: int | None = None):
     """Covariate frame aligned to ``index`` plus its role split.
@@ -281,6 +299,40 @@ def build_covariates(dataset: str, entity: str, index: pd.DatetimeIndex, task: s
         missing = frame.columns[frame.isna().any()].tolist()
         raise ValueError(f"covariates {missing} carry NaN for {dataset}/{entity}")
     return frame, roles_for(frame)
+
+
+def attach_block(frame: pd.DataFrame, dataset: str, house: int | None, task: str,
+                 column: str) -> pd.DataFrame:
+    """Append one optional covariate block that the task gate skipped.
+
+    ``soc`` is scoped to BESS tasks and ``day_ahead_price`` to Belgium, so a PV or
+    load series never carries ``soc``.  An explicit request for such a column (the
+    explainer's ``--covariates``) still has to be honoured, otherwise the game
+    cannot pit price against state of charge.  The frame gains the channel here,
+    which means the explained model is the one *with* that channel - a different
+    input mapping from the benchmark's own run for that series, and the report has
+    to say so.
+
+    Raises ``KeyError`` when the dataset genuinely has no such file, with the list
+    of columns that are available.
+    """
+    index = pd.DatetimeIndex(frame["ds"])
+    builders = {
+        "soc": lambda: soc_frame(dataset, house, "battery", index),
+        "day_ahead_price": lambda: price_frame(dataset, house, index),
+    }
+    if column not in builders:
+        raise KeyError(f"cannot attach {column!r}: known optional blocks are "
+                       f"{sorted(builders)}; available now: "
+                       f"{[c for c in frame.columns if c not in ('unique_id', 'ds', 'y')]}")
+    block = builders[column]()
+    if block.empty or column not in block.columns:
+        raise KeyError(f"{column!r} is not available for {dataset}/{task} (house={house}); "
+                       f"available now: "
+                       f"{[c for c in frame.columns if c not in ('unique_id', 'ds', 'y')]}")
+    block = block.reset_index(drop=True)
+    block.index = frame.index
+    return pd.concat([frame, block], axis=1)
 
 
 def scale_covariates(frame: pd.DataFrame, roles: dict, train_end: int) -> pd.DataFrame:

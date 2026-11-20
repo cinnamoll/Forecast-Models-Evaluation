@@ -55,12 +55,14 @@ import pandas as pd
 if str(Path(__file__).resolve().parents[1]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from utils.covariates import group_columns, roles_for, scale_covariates, shift_past_only
+from utils.covariates import (TIMESHAP_COLUMNS, attach_block, group_columns, restrict_columns,
+                              roles_for, scale_covariates, shift_past_only)
 from utils.protocol import horizon_for, sampling_tag,steps_per_day
 from utils.timeshap import (apply_coalition, additivity_residual, covariate_players,
-                            enumerate_game, group_shares, periodic_background,
-                            players_per_variable, shapley_exact, shares_by_player,
-                            signed_by_player, temporal_players, temporal_pruning_report)
+                            drop_noop_players, enumerate_game, group_shares,
+                            periodic_background, players_per_variable, shapley_exact,
+                            shares_by_player, signed_by_player, temporal_players,
+                            temporal_pruning_report)
 
 #: Models whose explanation needs no refit: a new input mapping for the zero-shot
 #: checkpoints, exact TreeSHAP for LightGBM.
@@ -122,70 +124,25 @@ def scaled_frame(frame: pd.DataFrame, level: str, horizon: int):
 
 def build_players(frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
                   include_temporal: bool = True, per_variable: bool = False):
-    """Temporal players + one player per covariate block (or per column)."""
+    """Temporal players + one player per covariate block (or per column).
+
+    Returns ``(players, dropped)``.  Players whose perturbation would reproduce
+    the frame exactly (a column equal to its own hour-of-day slot, i.e. a no-op
+    under ``mode="background"``) are dropped: their ``phi`` is identically zero,
+    so they only double the game.
+    """
     n_context = len(frame) - horizon
     players = temporal_players(n_context, per_day) if include_temporal else []
     if per_variable:
         players += players_per_variable(frame, roles, n_context)
-        return players
-    groups = group_columns([c for c in frame.columns if c not in ("unique_id", "ds", "y")])
-    players += covariate_players(frame, groups, roles, n_context)
-    return players
+    else:
+        groups = group_columns([c for c in frame.columns if c not in ("unique_id", "ds", "y")])
+        players += covariate_players(frame, groups, roles, n_context)
+    background = periodic_background(frame, per_day, train_end=n_context)
+    return drop_noop_players(frame, players, background)
 
 
 # ------------------------------------------------------------------ predictors
-
-def lightgbm_predictor(frame: pd.DataFrame, horizon: int, params: dict | None):
-    """Direct multi-step regressor: predict the horizon rows from their covariates."""
-    import lightgbm as lgb
-
-    columns = [c for c in frame.columns if c not in ("unique_id", "ds", "y")]
-    train_end = len(frame) - horizon
-    model = lgb.LGBMRegressor(random_state=0, n_jobs=-1, verbosity=-1, deterministic=False,
-                              bagging_fraction=0.5, feature_fraction=0.5, bagging_freq=1,
-                              **(params or {})).fit(frame[columns].iloc[:train_end],
-                                                    frame["y"].iloc[:train_end])
-
-    def predict(perturbed: pd.DataFrame) -> np.ndarray:
-        return model.predict(perturbed[columns].iloc[-horizon:])
-
-    return predict
-
-
-def tft_predictor(frame: pd.DataFrame, roles: dict, horizon: int, freq: str, epochs: int,
-                  gpu: int, params: dict | None, level: str):
-    """GluonTS TFT: one fit, then a new dataset per coalition."""
-    import mxnet as mx
-    from gluonts.mx.model.tft import TemporalFusionTransformerEstimator
-    from gluonts.mx.trainer import Trainer
-
-    from models.models_gluonts import covariate_spec, to_gluonts_dataset
-    from utils.device import uses_gpu
-
-    train_end = len(frame) - horizon
-    entry_extra, covariate_kwargs = covariate_spec(frame, roles, level, train_end=train_end)
-    start = pd.Timestamp(frame["ds"].iloc[0])
-    train_ds = to_gluonts_dataset(frame.iloc[:train_end], freq, start, entry_extra)
-    ctx = mx.gpu(gpu) if uses_gpu(gpu) else mx.cpu()
-
-    accepted = {k: v for k, v in (params or {}).items()
-                if k in {"hidden_dim", "num_heads", "dropout_rate"}}
-    trainer_kwargs = {k: v for k, v in (params or {}).items()
-                      if k in {"learning_rate", "num_batches_per_epoch"}}
-    trainer_kwargs.setdefault("num_batches_per_epoch", 1)
-    estimator = TemporalFusionTransformerEstimator(
-        freq=freq, prediction_length=horizon, **covariate_kwargs, **accepted,
-        trainer=Trainer(epochs=epochs, ctx=ctx, **trainer_kwargs))
-    predictor = estimator.train(training_data=train_ds)
-
-    def predict(perturbed: pd.DataFrame) -> np.ndarray:
-        dataset = to_gluonts_dataset(perturbed, freq, start, entry_extra)
-        forecast = next(iter(predictor.predict(dataset)))
-        return np.asarray(forecast.mean[:horizon], dtype=float)
-
-    return predict
-
-
 def chronos2_predictor(frame: pd.DataFrame, roles: dict, horizon: int, gpu: int, level: str):
     import torch
     from chronos import Chronos2Pipeline
@@ -206,7 +163,6 @@ def chronos2_predictor(frame: pd.DataFrame, roles: dict, horizon: int, gpu: int,
         return point_from_quantiles(quantiles[0], 1)
 
     return predict
-
 
 def timestral_predictor(frame: pd.DataFrame, roles: dict, horizon: int, gpu: int, level: str):
     from timestral import TimestralForecaster
@@ -252,50 +208,6 @@ def timesfm3_predictor(frame: pd.DataFrame, roles: dict, horizon: int, gpu: int,
     return predict
 
 
-def neuralforecast_refit_predictor(frame: pd.DataFrame, roles: dict, horizon: int, freq: str,
-                                   epochs: int, gpu: int, params: dict | None, model_name: str):
-    """NeuralForecast: refit on the perturbed frame for every coalition.
-
-    Expensive, and offered on purpose: without it those models have no Shapley
-    value at all, and a table that silently omits them reads as "no covariate
-    dependence" instead of "not measured".
-    """
-    import neuralforecast.models as nf_models
-    from neuralforecast import NeuralForecast
-
-    from utils.device import lightning_device_config, uses_gpu
-    import torch
-
-    model_class = getattr(nf_models, model_name)
-    protected = {"h", "input_size", "max_steps", "random_seed", "accelerator", "devices",
-                 "hist_exog_list", "futr_exog_list", "stat_exog_list"}
-
-    def predict(perturbed: pd.DataFrame) -> np.ndarray:
-        train_end = len(perturbed) - horizon
-        exog = {}
-        if roles["past_only"]:
-            exog["hist_exog_list"] = list(roles["past_only"])
-        if roles["known_future"]:
-            exog["futr_exog_list"] = list(roles["known_future"])
-        if roles["static"]:
-            exog["stat_exog_list"] = list(roles["static"])
-        kwargs = dict(h=horizon, input_size=horizon * 2, max_steps=int(epochs),
-                      random_seed=0, **lightning_device_config(gpu), **exog)
-        kwargs.update({k: v for k, v in (params or {}).items() if k not in protected})
-        static_df = None
-        if exog.get("stat_exog_list"):
-            static_df = perturbed.groupby("unique_id")[exog["stat_exog_list"]].first().reset_index()
-        nf = NeuralForecast(models=[model_class(**kwargs)], freq=freq)
-        nf.fit(df=perturbed.iloc[:train_end], val_size=horizon, static_df=static_df)
-        if exog.get("futr_exog_list"):
-            futr_df = perturbed.iloc[train_end:][["unique_id", "ds", *exog["futr_exog_list"]]]
-            forecast = nf.predict(futr_df=futr_df)
-        else:
-            forecast = nf.predict()
-        return forecast.iloc[-horizon:][model_name].to_numpy(dtype=float)
-
-    return predict
-
 
 def make_predictor(model: str, frame: pd.DataFrame, roles: dict, horizon: int, freq: str,
                    epochs: int, gpu: int, params: dict | None, level: str):
@@ -305,14 +217,19 @@ def make_predictor(model: str, frame: pd.DataFrame, roles: dict, horizon: int, f
         return timestral_predictor(frame, roles, horizon, gpu, level), True
     if model == "TimesFM3":
         return timesfm3_predictor(frame, roles, horizon, gpu, level), True
-    return neuralforecast_refit_predictor(frame, roles, horizon, freq, epochs, gpu, params, model), False
 
 def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
             mode: str, predict, include_temporal: bool, out_dir: Path,
             sampling: float, level: str, per_variable: bool = False,
             max_players: int = 12) -> dict:
-    players = build_players(frame, roles, horizon, per_day, include_temporal=include_temporal,
-                            per_variable=per_variable)
+    players, dropped = build_players(frame, roles, horizon, per_day,
+                                     include_temporal=include_temporal,
+                                     per_variable=per_variable)
+    if dropped:
+        logging.getLogger("timeshap").info(
+            "%s: dropped no-op player(s) %s (replacing them with the hour-of-day "
+            "background reproduces the column, so phi would be exactly 0)",
+            model, ", ".join(dropped))
     if len(players) > max_players:
         raise ValueError(f"{model}: {len(players)} players -> {2 ** len(players)} coalitions; "
                          f"raise --max-players above {max_players} only if that cost is affordable, "
@@ -358,8 +275,10 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
         "players": [p.name for p in players], "n_players": len(players),
         "coalitions": 2 ** len(players), "estimator": "exact (full enumeration)",
         "mode": mode, "horizon": horizon, "context": n_context,
+        "background_rotation": per_day // 2,
         "additivity_residual": residual, "seconds": round(elapsed, 3),
         "temporal_players": include_temporal, "per_variable": per_variable,
+        "noop_dropped": dropped,
     }, indent=2), encoding="utf-8")
 
     logging.getLogger("timeshap").info("%s: %d players, %d coalitions in %.1fs, residual %.2e",
@@ -369,9 +288,28 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
 
 
 def spearman_matrix(rows: pd.DataFrame) -> pd.DataFrame:
-    """Rank agreement between models over the reporting blocks."""
-    ranked = rows.rank(axis=1)
-    return ranked.T.corr(method="spearman")
+    """Rank agreement between models over the reporting blocks.
+
+    ``rows`` is blocks x models.  Each model ranks the blocks by its own share,
+    and the models are then correlated - that is the question the table asks
+    ("do the two models agree on what matters").  Correlating the other way
+    (rank across models per block, then transpose) yields a block x block matrix
+    of +-1/NaN artefacts, because with two models every block rank vector is
+    binary.
+
+    Constant blocks are dropped first: a block that is zero for every model (an
+    hour column whose background perturbation is a no-op, or a block held fixed)
+    carries no order and only contributes ties.  With two models the result is a
+    single off-diagonal number, so it is reported, not built upon.
+    """
+    informative = rows.loc[rows.abs().sum(axis=1) > 0]
+    dropped = [name for name in rows.index if name not in informative.index]
+    if dropped:
+        logging.getLogger("timeshap").info(
+            "spearman: dropping constant block(s) %s", ", ".join(map(str, dropped)))
+    if informative.empty or len(informative.columns) < 2:
+        return pd.DataFrame(index=rows.columns, columns=rows.columns, dtype=float)
+    return informative.corr(method="spearman")
 
 
 def main(argv=None) -> int:
@@ -398,8 +336,18 @@ def main(argv=None) -> int:
                              "4-24 s, so the full 4+G game is hours per cell.")
     parser.add_argument("--per-variable", action="store_true",
                         help="One player per covariate column instead of one per physical block "
-                             "(12 columns -> 4096 coalitions here, so pair it with --covariate-only "
-                             "unless the GPU budget is large).")
+                             "(5 columns -> 2^9 coalitions, so a full game stays affordable).")
+    parser.add_argument("--covariates", nargs="+", default=list(TIMESHAP_COLUMNS),
+                        metavar="COLUMN",
+                        help="Covariate columns the game and the model input use.  Default: "
+                             + " ".join(TIMESHAP_COLUMNS)
+                             + ".  The default set is the one that survived ablation: it drops "
+                               "quarter_hour/hour*4+minute//15 and is_weekend/dayofweek>=5 "
+                               "(exact functions of kept columns), dni (r=0.82-0.87 with ghi), "
+                               "precipitation (near-constant), and temperature + wind_speed "
+                               "(< 4 %% horizon-MAE effect, and temperature hurts more often "
+                               "than it helps).  Pass every column to reproduce the older "
+                               "12-player game.")
     parser.add_argument("--max-players", type=int, default=12,
                         help="Refuse a game larger than this many players (2^N coalitions).")
     parser.add_argument("--dry-run", action="store_true", help="Print the player set and exit.")
@@ -409,21 +357,39 @@ def main(argv=None) -> int:
     horizon = horizon_for(args.sampling)
     per_day = steps_per_day(args.sampling, args.dataset)
     frame = load_long_frame(args.dataset, args.series, args.level, args.sampling)
+    prefix = series_prefix(args.series)
+    task = {"pv_house": "solar", "bess_house": "battery"}.get(prefix, "load")
+    for column in [c for c in args.covariates if c not in frame.columns]:
+        frame = attach_block(frame, args.dataset, series_entity(args.series), task, column)
+        logging.getLogger("timeshap").info(
+            "attached %r to %s/%s - the loader scopes it to another task, so this game explains a "
+            "model WITH that channel, not the benchmark's input mapping for this series",
+            column, args.dataset, args.series)
     scaled, roles = scaled_frame(frame, args.level, horizon)
+    if args.covariates:
+        scaled, roles = restrict_columns(scaled, roles, args.covariates)
     freq = f"{int(15 * (100 / args.sampling))}min"
 
-    players = build_players(scaled, roles, horizon, per_day,
-                            include_temporal=not args.covariate_only,
-                            per_variable=args.per_variable)
+    logging.getLogger("timeshap").info(
+        "covariates (%d): %s", len(args.covariates), ", ".join(args.covariates))
+
+    players, dropped = build_players(scaled, roles, horizon, per_day,
+                                     include_temporal=not args.covariate_only,
+                                     per_variable=args.per_variable)
     logging.getLogger("timeshap").info(
         "%s/%s: %d points, horizon %d, %d players -> %d coalitions",
         args.dataset, args.series, len(scaled), horizon, len(players), 2 ** len(players))
+    if dropped:
+        logging.getLogger("timeshap").info(
+            "dropped no-op player(s) %s (no-op means replacing the column with the "
+            "hour-of-day background reproduces it, so phi would be exactly 0)",
+            ", ".join(dropped))
     if args.dry_run:
         for player in players:
             print(f"  {player.name:14s} {player.kind:10s} rows={player.size:5d} columns={len(player.columns)}")
         return 0
 
-    out_dir = args.out or (Path(__file__).resolve().parents[1] / "results" / "xai_timeshap" / args.dataset /
+    out_dir = args.out or (Path(__file__).resolve().parents[1] / "results_covariate" / "xai_timeshap" / args.dataset /
                            f"{args.series}_{args.level}_{sampling_tag(args.sampling)}")
     shares_rows, notes = {}, {}
     for model in args.models:

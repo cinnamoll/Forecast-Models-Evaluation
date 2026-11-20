@@ -119,6 +119,16 @@ def periodic_background(frame: pd.DataFrame, steps_per_day: int, train_end: int)
     Identifier columns (``unique_id``, ``ds``) are not part of the game and are
     left out: averaging a string is meaningless, and a timestamp is not a value a
     coalition can switch off.
+
+    A column that already equals its own per-slot mean - the usual case is a
+    calendar code equal to its slot, ``hour == index % steps_per_day`` on a
+    60-minute grid - is replaced by the same profile rotated half a day, so that
+    switching it off is a counterfactual instead of a no-op.  Without the
+    rotation such a player has ``phi ≡ 0`` exactly (the background reproduces the
+    column) and the time-of-day effect silently disappears from the game, which is
+    what turned ``hour`` into a dead player on the 15-minute datasets at sampling
+    25 %.  A column that is constant (``minute`` = 0 on an hourly grid) stays a
+    no-op under the rotation too, and ``drop_noop_players`` removes it.
     """
     numeric = [c for c in frame.columns if pd.api.types.is_numeric_dtype(frame[c])]
     train = frame.iloc[:train_end][numeric]
@@ -135,7 +145,17 @@ def periodic_background(frame: pd.DataFrame, steps_per_day: int, train_end: int)
             continue
         values = means.loc[slot] if slot in means.index else column_means
         profile.iloc[rows] = values.to_numpy()
-    return profile.astype(float)
+    profile = profile.astype(float)
+
+    shift = steps_per_day // 2
+    if shift:
+        rotated = (slots + shift) % steps_per_day
+        for column in numeric:
+            original = frame[column].to_numpy(dtype=float)
+            if not np.array_equal(original, profile[column].to_numpy()):
+                continue
+            profile[column] = profile[column].to_numpy()[rotated]
+    return profile
 
 
 def apply_coalition(frame: pd.DataFrame, background: pd.DataFrame, players: Sequence[Player],
@@ -172,6 +192,36 @@ def apply_coalition(frame: pd.DataFrame, background: pd.DataFrame, players: Sequ
                 values = np.rint(values).astype(frame[column].dtype)
             perturbed.iloc[positions, perturbed.columns.get_loc(column)] = values
     return perturbed
+
+
+def drop_noop_players(frame: pd.DataFrame, players: Sequence[Player],
+                      background: pd.DataFrame) -> Tuple[List[Player], List[str]]:
+    """Split players into ``(kept, dropped)`` by whether their perturbation bites.
+
+    Under the hour-of-day background, a column that already equals its own
+    per-slot mean is replaced by itself, so the payoff cannot move and ``phi`` is
+    exactly zero.  The usual case is a calendar column that equals its slot
+    (``hour == index % steps_per_day``: a 60-minute grid, e.g. 15-minute data at
+    sampling 25 %, or a gapless 30-minute series at 50 %).  That is a property of
+    the perturbation, not evidence that the model ignores the clock, and the
+    player only doubles the game.
+    """
+    kept, dropped = [], []
+    for player in players:
+        positions = list(player.positions)
+        columns = [c for c in player.columns if c in frame.columns and c in background.columns]
+        if not positions or not columns:
+            kept.append(player)
+            continue
+        same = all(
+            np.array_equal(frame[column].to_numpy(dtype=float)[positions],
+                           background[column].to_numpy(dtype=float)[positions])
+            for column in columns)
+        if same:
+            dropped.append(player.name)
+        else:
+            kept.append(player)
+    return kept, dropped
 
 
 def enumerate_game(payoff: Callable[[Tuple[str, ...]], np.ndarray], players: Sequence[Player],
@@ -233,13 +283,24 @@ def group_shares(shares: pd.Series) -> pd.Series:
     The four history players become one ``target_history`` entry: the table asks
     which *block* carries the forecast, and the four days are a partition of one
     block.  The per-day detail stays in ``shap_values.csv``.
+
+    The ``target_history`` row is emitted only when the game actually had history
+    players.  A covariate-only game (``--covariate-only``), a model forced to
+    ``include_temporal=False``, or an L0 run has no such player, and writing the
+    seeded 0.0 would read as "the model ignores the past" when it means "the past
+    was never a player" - the history is frozen into the base value instead.
     """
-    grouped = {"target_history": 0.0}
+    grouped = {}
+    history = 0.0
+    has_history = False
     for name, value in shares.items():
         if name.startswith("hist_d"):
-            grouped["target_history"] += float(value)
+            history += float(value)
+            has_history = True
         else:
             grouped[name] = float(value)
+    if has_history:
+        return pd.Series({"target_history": history, **grouped})
     return pd.Series(grouped)
 
 
