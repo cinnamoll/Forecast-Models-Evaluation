@@ -1,0 +1,30 @@
+{
+  "model": "Chronos2",
+  "level": "COV",
+  "sampling": 25.0,
+  "players": [
+    "hist_d1",
+    "hist_d2",
+    "hist_d3",
+    "hist_d4",
+    "hour",
+    "dayofweek",
+    "humidity",
+    "cloud_cover",
+    "ghi",
+    "day_ahead_price",
+    "soc"
+  ],
+  "n_players": 11,
+  "coalitions": 2048,
+  "estimator": "exact (full enumeration)",
+  "mode": "background",
+  "horizon": 48,
+  "context": 2136,
+  "background_rotation": 12,
+  "additivity_residual": 1.0471156105938318e-15,
+  "seconds": 190.558,
+  "temporal_players": true,
+  "per_variable": true,
+  "noop_dropped": []
+}

@@ -55,7 +55,12 @@ WEATHER_COLUMNS = {
 }
 
 CALENDAR_COLUMNS = ("quarter_hour", "hour", "minute", "dayofweek", "is_weekend")
-TIMESHAP_COLUMNS = ("hour", "dayofweek", "humidity", "ghi", "cloud_cover")
+#: Covariate players of the TimeSHAP game.  ``temperature`` stands here instead of
+#: ``ghi``: on these series the ablation effect of ``temperature`` stayed under 4 %
+#: (removing it even helped on three of four model/series pairs) while ``ghi`` cost
+#: Timestral +3.7 % on Belgium PV, so this set fits load series and gives up the
+#: irradiance channel a PV checkpoint leans on.  Pass ``--covariates`` to get it back.
+TIMESHAP_COLUMNS = ("hour", "dayofweek", "humidity", "temperature", "cloud_cover")
 
 
 def calendar_frame(index: pd.DatetimeIndex) -> pd.DataFrame:

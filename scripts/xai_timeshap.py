@@ -233,7 +233,7 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
     if len(players) > max_players:
         raise ValueError(f"{model}: {len(players)} players -> {2 ** len(players)} coalitions; "
                          f"raise --max-players above {max_players} only if that cost is affordable, "
-                         "or drop --per-variable")
+                         "or drop --per-covariate")
     n_context = len(frame) - horizon
     background = periodic_background(frame, per_day, train_end=n_context)
 
@@ -334,9 +334,11 @@ def main(argv=None) -> int:
                              "(32 coalitions instead of 512 at 5 blocks).  The default for the "
                              "13-series sweep in plan/scripts.md: a measured forward here costs "
                              "4-24 s, so the full 4+G game is hours per cell.")
-    parser.add_argument("--per-variable", action="store_true",
-                        help="One player per covariate column instead of one per physical block "
-                             "(5 columns -> 2^9 coalitions, so a full game stays affordable).")
+    parser.add_argument("--per-covariate", "--per-variable", dest="per_variable",
+                        action="store_true",
+                        help="One player per covariate column, on top of hist_d1..hist_d4 "
+                             "(5 columns -> 9 players -> 512 coalitions, so a full game stays "
+                             "affordable).  --per-variable is the old name, kept as an alias.")
     parser.add_argument("--covariates", nargs="+", default=list(TIMESHAP_COLUMNS),
                         metavar="COLUMN",
                         help="Covariate columns the game and the model input use.  Default: "
