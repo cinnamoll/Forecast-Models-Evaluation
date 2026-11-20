@@ -1,0 +1,28 @@
+{
+  "model": "Timestral",
+  "level": "COV",
+  "sampling": 25.0,
+  "players": [
+    "hist_d1",
+    "hist_d2",
+    "hist_d3",
+    "hist_d4",
+    "hour",
+    "dayofweek",
+    "temperature",
+    "humidity",
+    "cloud_cover"
+  ],
+  "n_players": 9,
+  "coalitions": 512,
+  "estimator": "exact (full enumeration)",
+  "mode": "background",
+  "horizon": 48,
+  "context": 4296,
+  "background_rotation": 12,
+  "additivity_residual": 3.2084319344390534e-17,
+  "seconds": 171.531,
+  "temporal_players": true,
+  "per_variable": true,
+  "noop_dropped": []
+}

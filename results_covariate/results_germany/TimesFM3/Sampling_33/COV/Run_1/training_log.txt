@@ -1,8 +1,9 @@
-2026-11-19 22:47:48,170 - INFO - Logger initialized at results_covariate/results_germany/TimesFM3/Sampling_33/COV/Run_1/training_log.txt
-2026-11-19 22:47:48,170 - INFO - ...Start TimesFM 3 forecasting...
-2026-11-19 22:47:48,170 - INFO - Forecasting Germany load
-2026-11-19 22:47:48,208 - INFO - germany_load: context=2848 steps (model reads 2848), horizon=64, covariates: 5 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:47:49,265 - INFO - germany_load - MAE: 0.0680, RMSE: 0.1701
-2026-11-19 22:47:49,562 - INFO - Saved model metrics to results_covariate/results_germany/TimesFM3/Sampling_33/COV/Run_1/model_metrics_summary.csv
-2026-11-19 22:47:49,687 - INFO - ...End TimesFM 3 forecasting...
-2026-11-19 22:47:49,687 - INFO - Forecasting completed in 1.52 seconds.
+2026-11-20 22:19:25,954 - INFO - Logger initialized at results_covariate_5cov/results_germany/TimesFM3/Sampling_33/COV/Run_1/training_log.txt
+2026-11-20 22:19:25,954 - INFO - ...Start TimesFM 3 forecasting...
+2026-11-20 22:19:25,954 - INFO - Forecasting Germany load
+2026-11-20 22:19:25,985 - INFO - germany_load: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:19:25,988 - INFO - germany_load: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:19:26,700 - INFO - germany_load - MAE: 0.0681, RMSE: 0.1708
+2026-11-20 22:19:27,022 - INFO - Saved model metrics to results_covariate_5cov/results_germany/TimesFM3/Sampling_33/COV/Run_1/model_metrics_summary.csv
+2026-11-20 22:19:27,173 - INFO - ...End TimesFM 3 forecasting...
+2026-11-20 22:19:27,173 - INFO - Forecasting completed in 1.22 seconds.

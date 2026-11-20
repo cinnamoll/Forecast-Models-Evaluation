@@ -27,7 +27,13 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
-from utils.tuning import tuned_resolution
+try:
+    from utils.tuning import tuned_resolution
+except ModuleNotFoundError:  # the tuning flow left the repo with the trainable models
+    def tuned_resolution(_results_root, _model, _dataset, _level, _sampling):
+        """Placeholder: ``TUNED_MODELS`` is empty, so no cell asks for a parameter file."""
+        return Path("__no_tuned_parameters__"), None
+
 
 #: Covariate flow of ``plan/scripts.md``: three zero-shot TSFMs.  Nothing is
 #: trained and nothing is tuned — the covariate block is an input mapping, so a
@@ -57,7 +63,8 @@ def completed_runs(dataset: str, model: str, sampling: float, level: str, result
                if child.is_dir() and (child / "model_metrics_summary.csv").exists())
 
 
-def command_for(dataset: str, model: str, sampling: float, level: str, results_dir) -> list[str]:
+def command_for(dataset: str, model: str, sampling: float, level: str, results_dir,
+                covariates=None) -> list[str]:
     # model -> (conda env, script, extra flags); the run is spawned in that env.
     specs = {
         "LightGBM": {"env": "statsml", "script": "models/models_statsml.py",
@@ -77,6 +84,8 @@ def command_for(dataset: str, model: str, sampling: float, level: str, results_d
              "--dataset", dataset, "--sampling_rates", f"{sampling:g}",
              "--runs", str(runs_for(model)), "--exog_level", level, "--results_dir", str(results_dir)]
     parts.extend(spec["flags"])
+    if covariates:
+        parts.extend(["--covariates", *covariates])
     # The parameters come from the tuning run of the *source* dataset, not of the
     # dataset being run: London borrows Zonnedael's, Belgium's eight series
     # borrow PV house 1's.  ``utils/tuning.py`` holds that map, and also decides
@@ -113,13 +122,17 @@ def main(argv=None) -> int:
     parser.add_argument("--force", action="store_true", help="Re-run cells that are complete.")
     parser.add_argument("--dry-run", action="store_true", help="Print the planned commands and exit.")
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")
+    parser.add_argument("--covariates", nargs="+", default=None,
+                        help="Restrict the COV block to these columns, e.g. the TimeSHAP set "
+                             "(hour dayofweek humidity temperature cloud_cover) plus price/soc on Belgium. "
+                             "Omit to keep every block the dataset has.")
     args = parser.parse_args(argv)
     results_dir = args.results_dir.resolve()
 
     # The covariate flow runs the zero-shot checkpoints only; the trainable models
     # stay in the L0 flow that reproduces the paper's table.
-    models = list(args.models) 
-    off_plan = [model for model in models]
+    models = list(args.models) if args.models else list(COV_MODELS)
+    off_plan = [model for model in models if model not in COV_MODELS]
     if off_plan:
         parser.error(f"--level {args.level} runs only {'/'.join(COV_MODELS)}; "
                      f"out of scope: {', '.join(off_plan)}")
@@ -135,7 +148,8 @@ def main(argv=None) -> int:
                     print(f"SKIP  {label}: {done}/{expected} runs on disk")
                     skipped += 1
                     continue
-                command = command_for(dataset, model, sampling, args.level, results_dir)
+                command = command_for(dataset, model, sampling, args.level, results_dir,
+                                     covariates=args.covariates)
                 print(f"RUN   {label} ({done}/{expected} runs)")
                 note = tuned_note(dataset, model, sampling, args.level, results_dir)
                 if note:

@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from utils.metrics import calculate_metrics, forecast_plot_and_csv, plot_model_metrics
 from utils.dataset_config import DatasetBelgiumNF, DatasetGermanyNF, DatasetLondonNF, DatasetZonnedaelNF
-from utils.covariates import roles_for
+from utils.covariates import restrict_columns, roles_for
 from utils.device import GPU_HELP, torch_device
 from utils.protocol import freq_for, horizon_for, run_dir, window
 from utils.tsfm import prepare_inputs, timesfm3_covariates, to_numpy
@@ -39,12 +39,26 @@ def setup_model_logger(save_dir):
 
 # Core function for TimesFM 3
 def timesfm3_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon, sampling_rate,
-                            forecaster, level="L0", symmetric_averaging=True):
+                            forecaster, level="L0", symmetric_averaging=True, covariates=None):
     y_df = y_df.iloc[::int(100 / sampling_rate)].reset_index(drop=True)
     test_df = y_df.iloc[-forecast_horizon:]
     feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
     roles = roles_for(y_df[feature_columns]) if feature_columns else {
         "known_future": [], "past_only": [], "static": [], "categorical": []}
+
+    if covariates:
+        available = [c for c in covariates if c in feature_columns]
+        missing = [c for c in covariates if c not in feature_columns]
+        if not available:
+            raise KeyError(
+                f"{model_name}: none of the requested covariates is in the frame "
+                f"(available: {feature_columns})")
+        y_df, roles = restrict_columns(y_df, roles, available)
+        feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
+        logging.info("%s: covariate set restricted to %s", model_name, ", ".join(feature_columns))
+        if missing:
+            logging.warning("%s: requested covariates absent from this series, skipped: %s",
+                            model_name, ", ".join(missing))
 
     payload = prepare_inputs(y_df, roles, level, forecast_horizon, scale_categorical=True)
     arguments = timesfm3_covariates(payload)
@@ -84,7 +98,7 @@ def timesfm3_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon, 
 
 # Full pipeline for TimesFM 3
 def train_all_models(dataset_name, dataset, save_dir, freq, forecast_horizon, sampling_rate,
-                     forecaster, device, level="L0", symmetric_averaging=True):
+                     forecaster, device, level="L0", symmetric_averaging=True, covariates=None):
     setup_model_logger(save_dir)
     metrics = []
     start_time = time.time()
@@ -96,14 +110,14 @@ def train_all_models(dataset_name, dataset, save_dir, freq, forecast_horizon, sa
             pv_data = dataset.get_inputs_for_pv(house, start_dt, end_dt, level=level)
             pv_mae, pv_rmse = timesfm3_forecast_model(pv_data, f"PV_house_{house}", save_dir, freq,
                                                      forecast_horizon, sampling_rate, forecaster, level,
-                                                     symmetric_averaging)
+                                                     symmetric_averaging, covariates)
             metrics.append({"model": f"pv_house_{house}", "MAE": pv_mae, "RMSE": pv_rmse})
         logging.info("Forecasting BESS")
         for house in [1, 2, 3, 4]:
             battery_data = dataset.get_inputs_for_battery(house, start_dt, end_dt, level=level)
             battery_mae, battery_rmse = timesfm3_forecast_model(battery_data, f"BESS_house_{house}", save_dir,
                                                                freq, forecast_horizon, sampling_rate, forecaster,
-                                                               level, symmetric_averaging)
+                                                               level, symmetric_averaging, covariates)
             metrics.append({"model": f"bess_house_{house}", "MAE": battery_mae, "RMSE": battery_rmse})
     elif dataset_name == "germany":
         start_dt, end_dt = window(dataset_name)
@@ -111,14 +125,14 @@ def train_all_models(dataset_name, dataset, save_dir, freq, forecast_horizon, sa
         load_data = dataset.get_inputs_for_load(start_dt, end_dt, level=level)
         load_mae, load_rmse = timesfm3_forecast_model(load_data, "germany_load", save_dir, freq,
                                                      forecast_horizon, sampling_rate, forecaster, level,
-                                                     symmetric_averaging)
+                                                     symmetric_averaging, covariates)
         metrics.append({"model": "germany_load", "MAE": load_mae, "RMSE": load_rmse})
     elif dataset_name == "london":
         logging.info("Forecasting London load")
         load_data = dataset.get_inputs_for_load(level=level)
         load_mae, load_rmse = timesfm3_forecast_model(load_data, "london_load", save_dir, freq,
                                                      forecast_horizon, sampling_rate, forecaster, level,
-                                                     symmetric_averaging)
+                                                     symmetric_averaging, covariates)
         metrics.append({"model": "london_load", "MAE": load_mae, "RMSE": load_rmse})
     elif dataset_name == "zonnedael":
         logging.info("Forecasting Zonnedael customers")
@@ -126,7 +140,7 @@ def train_all_models(dataset_name, dataset, save_dir, freq, forecast_horizon, sa
             data_df = dataset.get_inputs_for_zonnedael_consumption(customer_id, level=level)
             cust_mae, cust_rmse = timesfm3_forecast_model(data_df, f"zonnedael_customer_{customer_id}", save_dir,
                                                          freq, forecast_horizon, sampling_rate, forecaster,
-                                                         level, symmetric_averaging)
+                                                         level, symmetric_averaging, covariates)
             metrics.append({"model": f"zonnedael_customer_{customer_id}", "MAE": cust_mae, "RMSE": cust_rmse})
     pd.DataFrame(metrics).to_csv(os.path.join(save_dir, "model_metrics_summary.csv"), index=False, float_format="%.6f")
     plot_model_metrics(metrics, save_dir)
@@ -136,7 +150,7 @@ def train_all_models(dataset_name, dataset, save_dir, freq, forecast_horizon, sa
 
 
 def paper_forecasting_train(dataset_name, dataset, run_num, sampling_rate, forecaster, device,
-                            results_dir=PROJECT_ROOT / "results", level="L0", symmetric_averaging=True):
+                            results_dir=PROJECT_ROOT / "results", level="L0", symmetric_averaging=True, covariates=None):
     warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
     freq_str = freq_for(sampling_rate, style="T")
     forecast_horizon = horizon_for(sampling_rate)
@@ -146,7 +160,7 @@ def paper_forecasting_train(dataset_name, dataset, run_num, sampling_rate, forec
             torch.cuda.empty_cache()
         save_dir = run_dir(results_dir, dataset_name, "TimesFM3", sampling_rate, run_num, exog_level=level)
         train_all_models(dataset_name, dataset, save_dir, freq_str, forecast_horizon, sampling_rate,
-                         forecaster, device, level, symmetric_averaging)
+                         forecaster, device, level, symmetric_averaging, covariates)
         gc.collect()
         if device.startswith("cuda"):
             torch.cuda.empty_cache()
@@ -169,6 +183,9 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=4, help="Per-core batch size of the checkpoint.")
     parser.add_argument("--symmetric_averaging", "--symmetric-averaging", action=argparse.BooleanOptionalAction,
                         default=True, help="Benchmark protocol: average the forecast of x and -x (two forward passes).")
+    parser.add_argument("--covariates", nargs="+", default=None,
+                        help="Restrict the COV block to these columns (e.g. the TimeSHAP set). "
+                             "Omit to keep every block the dataset has.")
     parser.add_argument("--gpu", type=int, default=-1, help=GPU_HELP)
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")
     args = parser.parse_args()
@@ -183,4 +200,5 @@ if __name__ == "__main__":
         for run_num in range(1, args.runs + 1):
             paper_forecasting_train(args.dataset, dataset, run_num, sampling_rate, forecaster, device,
                                     args.results_dir, level=args.exog_level,
-                                    symmetric_averaging=args.symmetric_averaging)
+                                    symmetric_averaging=args.symmetric_averaging,
+                                    covariates=args.covariates)

@@ -1,8 +1,9 @@
-2026-11-19 22:48:16,578 - INFO - Logger initialized at results_covariate/results_london/TimesFM3/Sampling_25/COV/Run_1/training_log.txt
-2026-11-19 22:48:16,578 - INFO - ...Start TimesFM 3 forecasting...
-2026-11-19 22:48:16,578 - INFO - Forecasting London load
-2026-11-19 22:48:16,628 - INFO - london_load: context=4329 steps (model reads 4329), horizon=48, covariates: 5 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:48:18,109 - INFO - london_load - MAE: 0.0210, RMSE: 0.0287
-2026-11-19 22:48:18,576 - INFO - Saved model metrics to results_covariate/results_london/TimesFM3/Sampling_25/COV/Run_1/model_metrics_summary.csv
-2026-11-19 22:48:18,791 - INFO - ...End TimesFM 3 forecasting...
-2026-11-19 22:48:18,791 - INFO - Forecasting completed in 2.21 seconds.
+2026-11-20 22:20:00,752 - INFO - Logger initialized at results_covariate_5cov/results_london/TimesFM3/Sampling_25/COV/Run_1/training_log.txt
+2026-11-20 22:20:00,753 - INFO - ...Start TimesFM 3 forecasting...
+2026-11-20 22:20:00,753 - INFO - Forecasting London load
+2026-11-20 22:20:00,793 - INFO - london_load: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:20:00,797 - INFO - london_load: context=4329 steps (model reads 4329), horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:20:01,763 - INFO - london_load - MAE: 0.0210, RMSE: 0.0285
+2026-11-20 22:20:02,146 - INFO - Saved model metrics to results_covariate_5cov/results_london/TimesFM3/Sampling_25/COV/Run_1/model_metrics_summary.csv
+2026-11-20 22:20:02,282 - INFO - ...End TimesFM 3 forecasting...
+2026-11-20 22:20:02,282 - INFO - Forecasting completed in 1.53 seconds.

@@ -287,30 +287,6 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
             "seconds": elapsed, "n_players": len(players)}
 
 
-def spearman_matrix(rows: pd.DataFrame) -> pd.DataFrame:
-    """Rank agreement between models over the reporting blocks.
-
-    ``rows`` is blocks x models.  Each model ranks the blocks by its own share,
-    and the models are then correlated - that is the question the table asks
-    ("do the two models agree on what matters").  Correlating the other way
-    (rank across models per block, then transpose) yields a block x block matrix
-    of +-1/NaN artefacts, because with two models every block rank vector is
-    binary.
-
-    Constant blocks are dropped first: a block that is zero for every model (an
-    hour column whose background perturbation is a no-op, or a block held fixed)
-    carries no order and only contributes ties.  With two models the result is a
-    single off-diagonal number, so it is reported, not built upon.
-    """
-    informative = rows.loc[rows.abs().sum(axis=1) > 0]
-    dropped = [name for name in rows.index if name not in informative.index]
-    if dropped:
-        logging.getLogger("timeshap").info(
-            "spearman: dropping constant block(s) %s", ", ".join(map(str, dropped)))
-    if informative.empty or len(informative.columns) < 2:
-        return pd.DataFrame(index=rows.columns, columns=rows.columns, dtype=float)
-    return informative.corr(method="spearman")
-
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="TimeSHAP explanation of the covariate models.")
@@ -427,8 +403,6 @@ def main(argv=None) -> int:
         return 1
     table = pd.DataFrame(shares_rows)
     table.to_csv(out_dir / "group_shares_all_models.csv", float_format="%.8f")
-    matrix = spearman_matrix(table)
-    matrix.to_csv(out_dir / "spearman_matrix.csv", float_format="%.6f")
     (out_dir / "notes.json").write_text(json.dumps(notes, indent=2), encoding="utf-8")
     print(table.round(4).to_string())
     print(f"written -> {out_dir}")

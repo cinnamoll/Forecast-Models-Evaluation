@@ -1,8 +1,9 @@
-2026-11-19 22:46:58,834 - INFO - Logger initialized at results_covariate/results_germany/Timestral/Sampling_50/COV/Run_1/training_log.txt
-2026-11-19 22:46:58,834 - INFO - ...Start Timestral forecasting...
-2026-11-19 22:46:58,834 - INFO - Forecasting Germany load
-2026-11-19 22:46:58,878 - INFO - germany_load: context=4272 steps, horizon=96, covariates: 5 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:47:00,759 - INFO - germany_load - MAE: 0.0541, RMSE: 0.1446
-2026-11-19 22:47:01,232 - INFO - Saved model metrics to results_covariate/results_germany/Timestral/Sampling_50/COV/Run_1/model_metrics_summary.csv
-2026-11-19 22:47:01,400 - INFO - ...End Timestral forecasting...
-2026-11-19 22:47:01,400 - INFO - Forecasting completed in 2.57 seconds.
+2026-11-20 22:15:57,836 - INFO - Logger initialized at results_covariate_5cov/results_germany/Timestral/Sampling_50/COV/Run_1/training_log.txt
+2026-11-20 22:15:57,836 - INFO - ...Start Timestral forecasting...
+2026-11-20 22:15:57,836 - INFO - Forecasting Germany load
+2026-11-20 22:15:57,867 - INFO - germany_load: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:15:57,870 - INFO - germany_load: context=4272 steps, horizon=96, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:15:59,037 - INFO - germany_load - MAE: 0.0544, RMSE: 0.1444
+2026-11-20 22:15:59,387 - INFO - Saved model metrics to results_covariate_5cov/results_germany/Timestral/Sampling_50/COV/Run_1/model_metrics_summary.csv
+2026-11-20 22:15:59,503 - INFO - ...End Timestral forecasting...
+2026-11-20 22:15:59,503 - INFO - Forecasting completed in 1.67 seconds.

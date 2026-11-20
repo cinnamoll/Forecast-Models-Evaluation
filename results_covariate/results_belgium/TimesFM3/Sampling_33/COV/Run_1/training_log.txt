@@ -1,23 +1,31 @@
-2026-11-19 22:46:15,039 - INFO - Logger initialized at results_covariate/results_belgium/TimesFM3/Sampling_33/COV/Run_1/training_log.txt
-2026-11-19 22:46:15,039 - INFO - ...Start TimesFM 3 forecasting...
-2026-11-19 22:46:15,039 - INFO - Forecasting PV
-2026-11-19 22:46:15,086 - INFO - PV_house_1: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:16,718 - INFO - PV_house_1 - MAE: 0.0874, RMSE: 0.1573
-2026-11-19 22:46:17,230 - INFO - PV_house_2: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:19,010 - INFO - PV_house_2 - MAE: 0.0914, RMSE: 0.1680
-2026-11-19 22:46:19,193 - INFO - PV_house_3: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:20,865 - INFO - PV_house_3 - MAE: 0.0913, RMSE: 0.1654
-2026-11-19 22:46:21,005 - INFO - PV_house_4: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:22,748 - INFO - PV_house_4 - MAE: 0.0898, RMSE: 0.1628
-2026-11-19 22:46:22,857 - INFO - Forecasting BESS
-2026-11-19 22:46:22,906 - INFO - BESS_house_1: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:24,739 - INFO - BESS_house_1 - MAE: 0.0719, RMSE: 0.1115
-2026-11-19 22:46:24,907 - INFO - BESS_house_2: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:26,544 - INFO - BESS_house_2 - MAE: 0.1383, RMSE: 0.1890
-2026-11-19 22:46:26,699 - INFO - BESS_house_3: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:28,522 - INFO - BESS_house_3 - MAE: 0.0908, RMSE: 0.1366
-2026-11-19 22:46:28,655 - INFO - BESS_house_4: context=2848 steps (model reads 2848), horizon=64, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:46:30,306 - INFO - BESS_house_4 - MAE: 0.0650, RMSE: 0.1111
-2026-11-19 22:46:30,417 - INFO - Saved model metrics to results_covariate/results_belgium/TimesFM3/Sampling_33/COV/Run_1/model_metrics_summary.csv
-2026-11-19 22:46:30,674 - INFO - ...End TimesFM 3 forecasting...
-2026-11-19 22:46:30,674 - INFO - Forecasting completed in 15.63 seconds.
+2026-11-20 22:18:17,304 - INFO - Logger initialized at results_covariate_5cov/results_belgium/TimesFM3/Sampling_33/COV/Run_1/training_log.txt
+2026-11-20 22:18:17,304 - INFO - ...Start TimesFM 3 forecasting...
+2026-11-20 22:18:17,304 - INFO - Forecasting PV
+2026-11-20 22:18:17,333 - INFO - PV_house_1: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:17,336 - INFO - PV_house_1: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:18,036 - INFO - PV_house_1 - MAE: 0.0854, RMSE: 0.1510
+2026-11-20 22:18:18,368 - INFO - PV_house_2: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:18,372 - INFO - PV_house_2: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:18,899 - INFO - PV_house_2 - MAE: 0.0895, RMSE: 0.1627
+2026-11-20 22:18:19,012 - INFO - PV_house_3: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:19,015 - INFO - PV_house_3: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:19,548 - INFO - PV_house_3 - MAE: 0.0892, RMSE: 0.1586
+2026-11-20 22:18:19,664 - INFO - PV_house_4: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:19,667 - INFO - PV_house_4: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:20,202 - INFO - PV_house_4 - MAE: 0.0887, RMSE: 0.1589
+2026-11-20 22:18:20,296 - INFO - Forecasting BESS
+2026-11-20 22:18:20,321 - INFO - BESS_house_1: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:20,325 - INFO - BESS_house_1: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:20,860 - INFO - BESS_house_1 - MAE: 0.0656, RMSE: 0.1091
+2026-11-20 22:18:21,006 - INFO - BESS_house_2: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:21,011 - INFO - BESS_house_2: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:21,560 - INFO - BESS_house_2 - MAE: 0.1328, RMSE: 0.1824
+2026-11-20 22:18:21,682 - INFO - BESS_house_3: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:21,686 - INFO - BESS_house_3: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:22,232 - INFO - BESS_house_3 - MAE: 0.1144, RMSE: 0.1740
+2026-11-20 22:18:22,353 - INFO - BESS_house_4: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:18:22,356 - INFO - BESS_house_4: context=2848 steps (model reads 2848), horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:18:22,901 - INFO - BESS_house_4 - MAE: 0.0595, RMSE: 0.1046
+2026-11-20 22:18:22,995 - INFO - Saved model metrics to results_covariate_5cov/results_belgium/TimesFM3/Sampling_33/COV/Run_1/model_metrics_summary.csv
+2026-11-20 22:18:23,222 - INFO - ...End TimesFM 3 forecasting...
+2026-11-20 22:18:23,222 - INFO - Forecasting completed in 5.92 seconds.

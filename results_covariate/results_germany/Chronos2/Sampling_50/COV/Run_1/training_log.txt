@@ -1,8 +1,9 @@
-2026-11-19 22:45:39,863 - INFO - Logger initialized at results_covariate/results_germany/Chronos2/Sampling_50/COV/Run_1/training_log.txt
-2026-11-19 22:45:39,863 - INFO - ...Start Chronos-2 forecasting...
-2026-11-19 22:45:39,863 - INFO - Forecasting Germany load
-2026-11-19 22:45:39,904 - INFO - germany_load: context=4272 steps, horizon=96, covariates: 5 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:40,889 - INFO - germany_load - MAE: 0.0554, RMSE: 0.1461
-2026-11-19 22:45:41,222 - INFO - Saved model metrics to results_covariate/results_germany/Chronos2/Sampling_50/COV/Run_1/model_metrics_summary.csv
-2026-11-19 22:45:41,365 - INFO - ...End Chronos-2 forecasting...
-2026-11-19 22:45:41,365 - INFO - Forecasting completed in 1.50 seconds.
+2026-11-20 22:12:40,101 - INFO - Logger initialized at results_covariate_5cov/results_germany/Chronos2/Sampling_50/COV/Run_1/training_log.txt
+2026-11-20 22:12:40,101 - INFO - ...Start Chronos-2 forecasting...
+2026-11-20 22:12:40,101 - INFO - Forecasting Germany load
+2026-11-20 22:12:40,132 - INFO - germany_load: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:12:40,135 - INFO - germany_load: context=4272 steps, horizon=96, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:12:41,020 - INFO - germany_load - MAE: 0.0552, RMSE: 0.1458
+2026-11-20 22:12:41,339 - INFO - Saved model metrics to results_covariate_5cov/results_germany/Chronos2/Sampling_50/COV/Run_1/model_metrics_summary.csv
+2026-11-20 22:12:41,458 - INFO - ...End Chronos-2 forecasting...
+2026-11-20 22:12:41,458 - INFO - Forecasting completed in 1.36 seconds.

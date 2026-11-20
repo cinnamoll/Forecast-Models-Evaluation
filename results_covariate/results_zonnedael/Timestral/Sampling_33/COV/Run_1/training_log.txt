@@ -1,12 +1,15 @@
-2026-11-19 22:47:59,584 - INFO - Logger initialized at results_covariate/results_zonnedael/Timestral/Sampling_33/COV/Run_1/training_log.txt
-2026-11-19 22:47:59,584 - INFO - ...Start Timestral forecasting...
-2026-11-19 22:47:59,584 - INFO - Forecasting Zonnedael customers
-2026-11-19 22:47:59,683 - INFO - zonnedael_customer_8: context=5728 steps, horizon=64, covariates: 5 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:48:01,473 - INFO - zonnedael_customer_8 - MAE: 0.0582, RMSE: 0.1162
-2026-11-19 22:48:01,891 - INFO - zonnedael_customer_9: context=5728 steps, horizon=64, covariates: 5 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:48:02,838 - INFO - zonnedael_customer_9 - MAE: 0.0369, RMSE: 0.0827
-2026-11-19 22:48:03,062 - INFO - zonnedael_customer_43: context=5728 steps, horizon=64, covariates: 5 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:48:04,008 - INFO - zonnedael_customer_43 - MAE: 0.0383, RMSE: 0.0647
-2026-11-19 22:48:04,125 - INFO - Saved model metrics to results_covariate/results_zonnedael/Timestral/Sampling_33/COV/Run_1/model_metrics_summary.csv
-2026-11-19 22:48:04,292 - INFO - ...End Timestral forecasting...
-2026-11-19 22:48:04,292 - INFO - Forecasting completed in 4.71 seconds.
+2026-11-20 22:17:11,566 - INFO - Logger initialized at results_covariate_5cov/results_zonnedael/Timestral/Sampling_33/COV/Run_1/training_log.txt
+2026-11-20 22:17:11,566 - INFO - ...Start Timestral forecasting...
+2026-11-20 22:17:11,566 - INFO - Forecasting Zonnedael customers
+2026-11-20 22:17:11,646 - INFO - zonnedael_customer_8: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:17:11,649 - INFO - zonnedael_customer_8: context=5728 steps, horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:17:12,907 - INFO - zonnedael_customer_8 - MAE: 0.0579, RMSE: 0.1155
+2026-11-20 22:17:13,349 - INFO - zonnedael_customer_9: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:17:13,352 - INFO - zonnedael_customer_9: context=5728 steps, horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:17:13,791 - INFO - zonnedael_customer_9 - MAE: 0.0369, RMSE: 0.0830
+2026-11-20 22:17:13,960 - INFO - zonnedael_customer_43: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:17:13,963 - INFO - zonnedael_customer_43: context=5728 steps, horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:17:14,402 - INFO - zonnedael_customer_43 - MAE: 0.0380, RMSE: 0.0643
+2026-11-20 22:17:14,501 - INFO - Saved model metrics to results_covariate_5cov/results_zonnedael/Timestral/Sampling_33/COV/Run_1/model_metrics_summary.csv
+2026-11-20 22:17:14,642 - INFO - ...End Timestral forecasting...
+2026-11-20 22:17:14,642 - INFO - Forecasting completed in 3.08 seconds.

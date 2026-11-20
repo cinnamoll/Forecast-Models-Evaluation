@@ -1,23 +1,31 @@
-2026-11-19 22:45:30,878 - INFO - Logger initialized at results_covariate/results_belgium/Timestral/Sampling_25/COV/Run_1/training_log.txt
-2026-11-19 22:45:30,878 - INFO - ...Start Timestral forecasting...
-2026-11-19 22:45:30,878 - INFO - Forecasting PV
-2026-11-19 22:45:30,913 - INFO - PV_house_1: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:32,350 - INFO - PV_house_1 - MAE: 0.0730, RMSE: 0.1253
-2026-11-19 22:45:32,714 - INFO - PV_house_2: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:33,105 - INFO - PV_house_2 - MAE: 0.0708, RMSE: 0.1229
-2026-11-19 22:45:33,241 - INFO - PV_house_3: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:33,631 - INFO - PV_house_3 - MAE: 0.0702, RMSE: 0.1227
-2026-11-19 22:45:33,769 - INFO - PV_house_4: context=2136 steps, horizon=48, covariates: 6 known-future, 7 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:34,160 - INFO - PV_house_4 - MAE: 0.0742, RMSE: 0.1293
-2026-11-19 22:45:34,255 - INFO - Forecasting BESS
-2026-11-19 22:45:34,288 - INFO - BESS_house_1: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:34,706 - INFO - BESS_house_1 - MAE: 0.0767, RMSE: 0.1279
-2026-11-19 22:45:34,834 - INFO - BESS_house_2: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:35,253 - INFO - BESS_house_2 - MAE: 0.1147, RMSE: 0.1561
-2026-11-19 22:45:35,378 - INFO - BESS_house_3: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:35,794 - INFO - BESS_house_3 - MAE: 0.0994, RMSE: 0.1437
-2026-11-19 22:45:35,922 - INFO - BESS_house_4: context=2136 steps, horizon=48, covariates: 6 known-future, 8 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-19 22:45:36,338 - INFO - BESS_house_4 - MAE: 0.0620, RMSE: 0.1120
-2026-11-19 22:45:36,426 - INFO - Saved model metrics to results_covariate/results_belgium/Timestral/Sampling_25/COV/Run_1/model_metrics_summary.csv
-2026-11-19 22:45:36,731 - INFO - ...End Timestral forecasting...
-2026-11-19 22:45:36,731 - INFO - Forecasting completed in 5.85 seconds.
+2026-11-20 22:14:43,092 - INFO - Logger initialized at results_covariate_5cov/results_belgium/Timestral/Sampling_25/COV/Run_1/training_log.txt
+2026-11-20 22:14:43,092 - INFO - ...Start Timestral forecasting...
+2026-11-20 22:14:43,092 - INFO - Forecasting PV
+2026-11-20 22:14:43,123 - INFO - PV_house_1: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:43,126 - INFO - PV_house_1: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:44,163 - INFO - PV_house_1 - MAE: 0.0693, RMSE: 0.1198
+2026-11-20 22:14:44,493 - INFO - PV_house_2: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:44,496 - INFO - PV_house_2: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:44,669 - INFO - PV_house_2 - MAE: 0.0696, RMSE: 0.1233
+2026-11-20 22:14:44,784 - INFO - PV_house_3: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:44,786 - INFO - PV_house_3: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:44,963 - INFO - PV_house_3 - MAE: 0.0709, RMSE: 0.1246
+2026-11-20 22:14:45,074 - INFO - PV_house_4: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:45,077 - INFO - PV_house_4: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:45,253 - INFO - PV_house_4 - MAE: 0.0724, RMSE: 0.1277
+2026-11-20 22:14:45,350 - INFO - Forecasting BESS
+2026-11-20 22:14:45,377 - INFO - BESS_house_1: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:45,379 - INFO - BESS_house_1: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:45,557 - INFO - BESS_house_1 - MAE: 0.0767, RMSE: 0.1290
+2026-11-20 22:14:45,678 - INFO - BESS_house_2: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:45,680 - INFO - BESS_house_2: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:45,857 - INFO - BESS_house_2 - MAE: 0.1176, RMSE: 0.1579
+2026-11-20 22:14:45,966 - INFO - BESS_house_3: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:45,969 - INFO - BESS_house_3: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:46,146 - INFO - BESS_house_3 - MAE: 0.1166, RMSE: 0.1736
+2026-11-20 22:14:46,258 - INFO - BESS_house_4: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
+2026-11-20 22:14:46,260 - INFO - BESS_house_4: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-20 22:14:46,438 - INFO - BESS_house_4 - MAE: 0.0625, RMSE: 0.1101
+2026-11-20 22:14:46,528 - INFO - Saved model metrics to results_covariate_5cov/results_belgium/Timestral/Sampling_25/COV/Run_1/model_metrics_summary.csv
+2026-11-20 22:14:46,851 - INFO - ...End Timestral forecasting...
+2026-11-20 22:14:46,851 - INFO - Forecasting completed in 3.76 seconds.
