@@ -1,15 +1,18 @@
-2026-11-20 22:14:06,876 - INFO - Logger initialized at results_covariate_5cov/results_zonnedael/Chronos2/Sampling_33/COV/Run_1/training_log.txt
-2026-11-20 22:14:06,876 - INFO - ...Start Chronos-2 forecasting...
-2026-11-20 22:14:06,876 - INFO - Forecasting Zonnedael customers
-2026-11-20 22:14:06,957 - INFO - zonnedael_customer_8: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:14:06,959 - INFO - zonnedael_customer_8: context=5728 steps, horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:14:07,879 - INFO - zonnedael_customer_8 - MAE: 0.0611, RMSE: 0.1215
-2026-11-20 22:14:08,268 - INFO - zonnedael_customer_9: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:14:08,271 - INFO - zonnedael_customer_9: context=5728 steps, horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:14:08,361 - INFO - zonnedael_customer_9 - MAE: 0.0350, RMSE: 0.0778
-2026-11-20 22:14:08,538 - INFO - zonnedael_customer_43: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:14:08,540 - INFO - zonnedael_customer_43: context=5728 steps, horizon=64, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:14:08,630 - INFO - zonnedael_customer_43 - MAE: 0.0350, RMSE: 0.0614
-2026-11-20 22:14:08,734 - INFO - Saved model metrics to results_covariate_5cov/results_zonnedael/Chronos2/Sampling_33/COV/Run_1/model_metrics_summary.csv
-2026-11-20 22:14:08,883 - INFO - ...End Chronos-2 forecasting...
-2026-11-20 22:14:08,883 - INFO - Forecasting completed in 2.01 seconds.
+2026-11-22 00:24:47,112 - INFO - Logger initialized at results_covariate/results_zonnedael/Chronos2/Sampling_33/COV/Run_1/training_log.txt
+2026-11-22 00:24:47,112 - INFO - ...Start Chronos-2 forecasting...
+2026-11-22 00:24:47,112 - INFO - Forecasting Zonnedael customers
+2026-11-22 00:24:47,197 - INFO - zonnedael_customer_8: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:24:47,198 - INFO - zonnedael_customer_8: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:24:47,203 - INFO - zonnedael_customer_8: context=5728 steps, horizon=64, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:24:48,084 - INFO - zonnedael_customer_8 - MAE: 0.0612, RMSE: 0.1213
+2026-11-22 00:24:48,471 - INFO - zonnedael_customer_9: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:24:48,472 - INFO - zonnedael_customer_9: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:24:48,476 - INFO - zonnedael_customer_9: context=5728 steps, horizon=64, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:24:48,583 - INFO - zonnedael_customer_9 - MAE: 0.0348, RMSE: 0.0778
+2026-11-22 00:24:48,752 - INFO - zonnedael_customer_43: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:24:48,753 - INFO - zonnedael_customer_43: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:24:48,757 - INFO - zonnedael_customer_43: context=5728 steps, horizon=64, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:24:48,863 - INFO - zonnedael_customer_43 - MAE: 0.0345, RMSE: 0.0610
+2026-11-22 00:24:48,959 - INFO - Saved model metrics to results_covariate/results_zonnedael/Chronos2/Sampling_33/COV/Run_1/model_metrics_summary.csv
+2026-11-22 00:24:49,093 - INFO - ...End Chronos-2 forecasting...
+2026-11-22 00:24:49,093 - INFO - Forecasting completed in 1.98 seconds.

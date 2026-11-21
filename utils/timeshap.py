@@ -31,6 +31,8 @@ from typing import Callable, Dict, Iterable, List, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
+from utils.covariates import base_variable
+
 
 @dataclass(frozen=True)
 class Player:
@@ -85,13 +87,18 @@ def covariate_players(frame: pd.DataFrame, groups: Dict[str, Sequence[str]],
 
 def players_per_variable(frame: pd.DataFrame, roles: Dict[str, Sequence[str]],
                          n_context: int) -> List[Player]:
-    """One player per covariate column, instead of one per physical block.
+    """One player per covariate *variable*, instead of one per physical block.
 
     ``covariate_players`` groups columns (``group_columns``) so a player is "the
     calendar" rather than "the hour code".  Splitting is the answer to the other
     question - which *single* column the forecast leans on - and it costs a much
     larger game: ``C`` columns need ``2^C`` coalitions where the grouped game
     needs ``2^blocks``.
+
+    A variable that is carried as a pair of columns stays **one** player:
+    ``hour_sin`` and ``hour_cos`` are exact functions of each other, so scoring
+    them separately would only split their credit arbitrarily at the price of
+    doubling the game (``utils.covariates.base_variable`` names the pair).
 
     Two caveats are inherent to the perturbation, not to this function:
 
@@ -104,58 +111,91 @@ def players_per_variable(frame: pd.DataFrame, roles: Dict[str, Sequence[str]],
       context.
     """
     known = set(roles.get("known_future", []))
-    players = []
+    order, grouped = [], {}
     for column in frame.columns:
         if column in ("unique_id", "ds", "y"):
             continue
-        rows = tuple(range(len(frame))) if column in known else tuple(range(n_context))
-        players.append(Player(name=column, positions=rows, columns=(column,), kind="covariate"))
+        variable = base_variable(column)
+        if variable not in grouped:
+            grouped[variable] = []
+            order.append(variable)
+        grouped[variable].append(column)
+    players = []
+    for variable in order:
+        columns = tuple(grouped[variable])
+        rows = (tuple(range(len(frame))) if all(c in known for c in columns)
+                else tuple(range(n_context)))
+        players.append(Player(name=variable, positions=rows, columns=columns, kind="covariate"))
     return players
 
 
-def periodic_background(frame: pd.DataFrame, steps_per_day: int, train_end: int) -> pd.DataFrame:
+def periodic_background(frame: pd.DataFrame, steps_per_day: int, train_end: int,
+                        cycles: Dict[str, int] | None = None) -> pd.DataFrame:
     """Hour-of-day mean of every numeric column, computed on the training rows only.
 
     Identifier columns (``unique_id``, ``ds``) are not part of the game and are
     left out: averaging a string is meaningless, and a timestamp is not a value a
     coalition can switch off.
 
-    A column that already equals its own per-slot mean - the usual case is a
+    ``cycles`` gives a column its own cycle length in rows; the default is one day.
+    A weekly column needs ``7 * steps_per_day``, because its counterfactual has to
+    be *half a week* later rather than half a day: averaging a weekly cycle inside a
+    daily slot flattens it to the series mean, so ``dayofweek`` used to be switched
+    off as "the constant Wednesday" instead of being rotated.
+
+    A column that already equals its own per-phase mean - the usual case is a
     calendar code equal to its slot, ``hour == index % steps_per_day`` on a
-    60-minute grid - is replaced by the same profile rotated half a day, so that
+    60-minute grid - is replaced by the same profile rotated half a cycle, so that
     switching it off is a counterfactual instead of a no-op.  Without the
     rotation such a player has ``phi ≡ 0`` exactly (the background reproduces the
-    column) and the time-of-day effect silently disappears from the game, which is
-    what turned ``hour`` into a dead player on the 15-minute datasets at sampling
-    25 %.  A column that is constant (``minute`` = 0 on an hourly grid) stays a
-    no-op under the rotation too, and ``drop_noop_players`` removes it.
+    column) and the time-of-day effect silently disappears from the game.  The
+    comparison is tolerant and the *exact* column is used as the phase table: a
+    cyclic encoding (``hour_sin``) has per-phase means that differ from the column
+    in the last bits, and an exact-equality test would leave it with a
+    numerically-zero perturbation instead of a half-cycle shift.
     """
     numeric = [c for c in frame.columns if pd.api.types.is_numeric_dtype(frame[c])]
     train = frame.iloc[:train_end][numeric]
     if train.empty:
         raise ValueError("no training rows to build the background from")
-    slots = np.arange(len(frame)) % steps_per_day
-    profile = pd.DataFrame(index=frame.index, columns=numeric, dtype=float)
-    slot_values = slots[: len(train)]
-    means = train.groupby(slot_values).mean()
-    column_means = train.mean()
-    for slot in range(steps_per_day):
-        rows = np.where(slots == slot)[0]
-        if rows.size == 0:
-            continue
-        values = means.loc[slot] if slot in means.index else column_means
-        profile.iloc[rows] = values.to_numpy()
-    profile = profile.astype(float)
+    index = np.arange(len(frame))
+    periods = {column: max(int((cycles or {}).get(column, steps_per_day)), 1)
+               for column in numeric}
 
-    shift = steps_per_day // 2
-    if shift:
-        rotated = (slots + shift) % steps_per_day
-        for column in numeric:
-            original = frame[column].to_numpy(dtype=float)
-            if not np.array_equal(original, profile[column].to_numpy()):
-                continue
-            profile[column] = profile[column].to_numpy()[rotated]
+    profile = pd.DataFrame(index=frame.index, columns=numeric, dtype=float)
+    for period in sorted(set(periods.values())):
+        columns = [c for c in numeric if periods[c] == period]
+        slots = index % period
+        means = train[columns].groupby(slots[: len(train)]).mean()
+        column_means = train[columns].mean()
+        table = pd.DataFrame(index=range(period), columns=columns, dtype=float)
+        for phase in range(period):
+            table.loc[phase] = means.loc[phase] if phase in means.index else column_means
+        profile[columns] = table.iloc[slots].to_numpy()
+
+    for column in numeric:
+        period = periods[column]
+        shift = period // 2
+        if shift <= 0:
+            continue
+        original = frame[column].to_numpy(dtype=float)
+        values = profile[column].to_numpy(dtype=float)
+        if not _is_phase_profile(original, values):
+            continue
+        table = np.full(period, float(np.nanmean(values)) if values.size else 0.0)
+        take = min(period, len(original))
+        table[:take] = original[:take]
+        slots = index % period
+        profile[column] = table[(slots + shift) % period]
     return profile
+
+
+def _is_phase_profile(original: np.ndarray, values: np.ndarray, atol: float = 1e-9) -> bool:
+    """Does ``values`` reproduce ``original`` up to rounding of the per-phase mean?"""
+    if original.shape != values.shape:
+        return False
+    scale = float(np.nanmax(np.abs(values))) if values.size else 0.0
+    return bool(np.allclose(original, values, rtol=0.0, atol=atol * max(scale, 1.0)))
 
 
 def apply_coalition(frame: pd.DataFrame, background: pd.DataFrame, players: Sequence[Player],

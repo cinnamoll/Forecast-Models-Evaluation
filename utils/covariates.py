@@ -62,6 +62,101 @@ CALENDAR_COLUMNS = ("quarter_hour", "hour", "minute", "dayofweek", "is_weekend")
 #: irradiance channel a PV checkpoint leans on.  Pass ``--covariates`` to get it back.
 TIMESHAP_COLUMNS = ("hour", "dayofweek", "humidity", "temperature", "cloud_cover")
 
+#: Calendar codes that can be carried as a continuous cyclic pair instead of an
+#: integer code: ``base -> (period in the column's own units, period in days)``.
+#:
+#: A checkpoint with an embedding table wants the integer code; a checkpoint that
+#: reads covariates as numbers wants a smooth, zero-mean, bounded channel — and
+#: for one of them (Timestral) an integer *categorical* code is worse than useless,
+#: because it is target-encoded into an hour-of-day climatology that a relabeling of
+#: the clock cannot move (``phi ≡ 0`` exactly).  ``period_days`` is only used to
+#: size the counterfactual: the hour-of-day background of a weekly column has to be
+#: shifted half a *week*, not half a day.
+CYCLIC_CALENDAR = {"hour": (24.0, 1), "dayofweek": (7.0, 7)}
+
+#: Suffixes of the two columns that replace one cyclic calendar code.
+CYCLIC_SUFFIXES = ("_sin", "_cos")
+
+
+def cyclic_columns(base: str) -> tuple:
+    """The two column names that replace the cyclic code ``base``."""
+    return tuple(f"{base}{suffix}" for suffix in CYCLIC_SUFFIXES)
+
+
+def base_variable(column: str) -> str:
+    """``hour_sin`` -> ``hour``; any other column name is returned unchanged.
+
+    The TimeSHAP player set is one player per *variable*, so the pair of columns a
+    cyclic encoding needs must not be scored as two independent players (Shapley
+    would split the credit between two exact functions of each other).
+    """
+    for suffix in CYCLIC_SUFFIXES:
+        if column.endswith(suffix):
+            return column[: -len(suffix)]
+    return column
+
+
+def expand_cyclic_names(columns, cycles: dict) -> list:
+    """``hour`` -> ``hour_sin, hour_cos`` for the columns a cyclic transform replaced.
+
+    A caller that asks for the base name (the one the dataset has, and the one every
+    report and plan already uses) keeps working after ``--cyclic``: the name is
+    expanded only when that pair actually exists in ``cycles``.
+    """
+    expanded = []
+    for name in columns:
+        pair = cyclic_columns(name) if base_variable(name) == name else ()
+        expanded.extend(pair if pair and pair[0] in cycles else (name,))
+    return expanded
+
+
+def rows_per_day(frame: pd.DataFrame) -> int:
+    """Rows per day of a frame, measured on its own ``ds`` column.
+
+    The benchmark subsamples each dataset at its own base resolution, so the number
+    of rows in a day cannot be assumed: London carries 30-minute data (12 rows a day
+    at sampling 25 %) while the others carry 15-minute data (24 rows a day).
+    """
+    if "ds" not in frame.columns:
+        raise KeyError("a frame without a 'ds' column has no measurable day length")
+    step = pd.to_datetime(pd.Series(frame["ds"])).diff().median()
+    if not step or np.isnan(pd.Timedelta(step).total_seconds()):
+        raise ValueError("cannot measure the step of a frame with a single timestamp")
+    return max(int(round(pd.Timedelta(hours=24) / pd.Timedelta(step))), 1)
+
+
+def cyclic_calendar(frame: pd.DataFrame, columns=None, steps_per_day: int = 24) -> tuple:
+    """Replace integer calendar codes by ``(sin, cos)`` on the natural period.
+
+    Returns ``(frame, cycles)`` where ``cycles`` maps each new column to the length of
+    its cycle **in rows**, which is what ``utils.timeshap.periodic_background`` needs
+    to build a counterfactual of "half a cycle later" — 12 hours for ``hour``, 3.5
+    days for ``dayofweek``.
+
+    The pairs are continuous, zero-centred and bounded, so a checkpoint that reads
+    covariates as numbers sees the clock as a phase instead of as a sawtooth that
+    jumps at midnight; and because they are numeric they reach every model through
+    the *numeric* covariate channel, never through a categorical/embedding one.
+    """
+    columns = tuple(CYCLIC_CALENDAR if columns is None else columns)
+    present = [c for c in columns if c in frame.columns]
+    if not present:
+        return frame, {}
+    two_pi = 2.0 * np.pi
+    blocks, cycles = [], {}
+    for column in frame.columns:
+        if column not in present:
+            blocks.append(frame[[column]])
+            continue
+        period_units, period_days = CYCLIC_CALENDAR[column]
+        angle = two_pi * frame[column].to_numpy(dtype=float) / period_units
+        blocks.append(pd.DataFrame({f"{column}_sin": np.sin(angle),
+                                    f"{column}_cos": np.cos(angle)}, index=frame.index))
+        for name in cyclic_columns(column):
+            cycles[name] = int(period_days * steps_per_day)
+    return pd.concat(blocks, axis=1), cycles
+
+
 
 def calendar_frame(index: pd.DatetimeIndex) -> pd.DataFrame:
     """The paper's day/hour block, one column per feature.
@@ -235,7 +330,11 @@ def roles_for(frame: pd.DataFrame) -> dict:
     ``static_`` prefixed columns are constant per entity.
     """
     # Calendar and the auction are known in advance; the price is Belgium-only.
-    known_future_columns = CALENDAR_COLUMNS + ("day_ahead_price",)
+    # The cyclic pair of a calendar code is calendar too - and it must stay out of
+    # ``categorical`` so that it reaches every model as a number, not as a code to
+    # embed or target-encode.
+    calendar_names = tuple(name for base in CYCLIC_CALENDAR for name in cyclic_columns(base))
+    known_future_columns = CALENDAR_COLUMNS + calendar_names + ("day_ahead_price",)
     # Codes the models embed or target-encode instead of scaling.
     categorical_columns = CALENDAR_COLUMNS + ("static_ac_phase", "static_bess_model")
 
@@ -393,8 +492,8 @@ def column_groups(columns) -> dict:
     split the credit arbitrarily between them).
     """
     feature_groups = {
-        "time_of_day": ("quarter_hour", "hour", "minute"),
-        "day_of_week": ("dayofweek", "is_weekend"),
+        "time_of_day": ("quarter_hour", "hour", "minute") + cyclic_columns("hour"),
+        "day_of_week": ("dayofweek", "is_weekend") + cyclic_columns("dayofweek"),
         "temperature": ("temperature",),
         "radiation": ("ghi", "dni", "cloud_cover"),
         "air": ("humidity", "wind_speed", "precipitation"),

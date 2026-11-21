@@ -1,15 +1,18 @@
-2026-11-20 22:17:35,014 - INFO - Logger initialized at results_covariate_5cov/results_zonnedael/Timestral/Sampling_100/COV/Run_1/training_log.txt
-2026-11-20 22:17:35,014 - INFO - ...Start Timestral forecasting...
-2026-11-20 22:17:35,014 - INFO - Forecasting Zonnedael customers
-2026-11-20 22:17:35,089 - INFO - zonnedael_customer_8: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:17:35,093 - INFO - zonnedael_customer_8: context=17184 steps, horizon=192, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:17:37,449 - INFO - zonnedael_customer_8 - MAE: 0.0514, RMSE: 0.1125
-2026-11-20 22:17:37,863 - INFO - zonnedael_customer_9: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:17:37,867 - INFO - zonnedael_customer_9: context=17184 steps, horizon=192, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:17:39,396 - INFO - zonnedael_customer_9 - MAE: 0.0431, RMSE: 0.0897
-2026-11-20 22:17:39,567 - INFO - zonnedael_customer_43: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:17:39,570 - INFO - zonnedael_customer_43: context=17184 steps, horizon=192, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:17:41,099 - INFO - zonnedael_customer_43 - MAE: 0.0362, RMSE: 0.0716
-2026-11-20 22:17:41,213 - INFO - Saved model metrics to results_covariate_5cov/results_zonnedael/Timestral/Sampling_100/COV/Run_1/model_metrics_summary.csv
-2026-11-20 22:17:41,362 - INFO - ...End Timestral forecasting...
-2026-11-20 22:17:41,362 - INFO - Forecasting completed in 6.35 seconds.
+2026-11-22 00:33:46,328 - INFO - Logger initialized at results_covariate/results_zonnedael/Timestral/Sampling_100/COV/Run_1/training_log.txt
+2026-11-22 00:33:46,328 - INFO - ...Start Timestral forecasting...
+2026-11-22 00:33:46,328 - INFO - Forecasting Zonnedael customers
+2026-11-22 00:33:46,408 - INFO - zonnedael_customer_8: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:33:46,409 - INFO - zonnedael_customer_8: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:33:46,414 - INFO - zonnedael_customer_8: context=17184 steps, horizon=192, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:33:49,260 - INFO - zonnedael_customer_8 - MAE: 0.0515, RMSE: 0.1124
+2026-11-22 00:33:49,640 - INFO - zonnedael_customer_9: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:33:49,641 - INFO - zonnedael_customer_9: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:33:49,646 - INFO - zonnedael_customer_9: context=17184 steps, horizon=192, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:33:51,704 - INFO - zonnedael_customer_9 - MAE: 0.0426, RMSE: 0.0895
+2026-11-22 00:33:51,880 - INFO - zonnedael_customer_43: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:33:51,881 - INFO - zonnedael_customer_43: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:33:51,886 - INFO - zonnedael_customer_43: context=17184 steps, horizon=192, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:33:53,946 - INFO - zonnedael_customer_43 - MAE: 0.0367, RMSE: 0.0719
+2026-11-22 00:33:54,048 - INFO - Saved model metrics to results_covariate/results_zonnedael/Timestral/Sampling_100/COV/Run_1/model_metrics_summary.csv
+2026-11-22 00:33:54,180 - INFO - ...End Timestral forecasting...
+2026-11-22 00:33:54,180 - INFO - Forecasting completed in 7.85 seconds.

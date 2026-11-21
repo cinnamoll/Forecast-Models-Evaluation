@@ -1,31 +1,39 @@
-2026-11-20 22:11:20,771 - INFO - Logger initialized at results_covariate_5cov/results_belgium/Chronos2/Sampling_25/COV/Run_1/training_log.txt
-2026-11-20 22:11:20,771 - INFO - ...Start Chronos-2 forecasting...
-2026-11-20 22:11:20,771 - INFO - Forecasting PV
-2026-11-20 22:11:20,803 - INFO - PV_house_1: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:20,806 - INFO - PV_house_1: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:22,232 - INFO - PV_house_1 - MAE: 0.1053, RMSE: 0.1858
-2026-11-20 22:11:22,589 - INFO - PV_house_2: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:22,594 - INFO - PV_house_2: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:22,640 - INFO - PV_house_2 - MAE: 0.1046, RMSE: 0.1842
-2026-11-20 22:11:22,763 - INFO - PV_house_3: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:22,766 - INFO - PV_house_3: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:22,809 - INFO - PV_house_3 - MAE: 0.1061, RMSE: 0.1892
-2026-11-20 22:11:22,931 - INFO - PV_house_4: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:22,934 - INFO - PV_house_4: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:22,976 - INFO - PV_house_4 - MAE: 0.1078, RMSE: 0.1909
-2026-11-20 22:11:23,078 - INFO - Forecasting BESS
-2026-11-20 22:11:23,107 - INFO - BESS_house_1: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:23,110 - INFO - BESS_house_1: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:23,154 - INFO - BESS_house_1 - MAE: 0.0755, RMSE: 0.1257
-2026-11-20 22:11:23,289 - INFO - BESS_house_2: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:23,291 - INFO - BESS_house_2: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:23,335 - INFO - BESS_house_2 - MAE: 0.1216, RMSE: 0.1659
-2026-11-20 22:11:23,452 - INFO - BESS_house_3: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:23,455 - INFO - BESS_house_3: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:23,497 - INFO - BESS_house_3 - MAE: 0.1007, RMSE: 0.1448
-2026-11-20 22:11:23,616 - INFO - BESS_house_4: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:11:23,619 - INFO - BESS_house_4: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:11:23,661 - INFO - BESS_house_4 - MAE: 0.0691, RMSE: 0.1006
-2026-11-20 22:11:23,748 - INFO - Saved model metrics to results_covariate_5cov/results_belgium/Chronos2/Sampling_25/COV/Run_1/model_metrics_summary.csv
-2026-11-20 22:11:23,958 - INFO - ...End Chronos-2 forecasting...
-2026-11-20 22:11:23,958 - INFO - Forecasting completed in 3.19 seconds.
+2026-11-22 00:22:13,910 - INFO - Logger initialized at results_covariate/results_belgium/Chronos2/Sampling_25/COV/Run_1/training_log.txt
+2026-11-22 00:22:13,910 - INFO - ...Start Chronos-2 forecasting...
+2026-11-22 00:22:13,910 - INFO - Forecasting PV
+2026-11-22 00:22:13,947 - INFO - PV_house_1: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:13,947 - INFO - PV_house_1: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:13,952 - INFO - PV_house_1: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:15,384 - INFO - PV_house_1 - MAE: 0.1051, RMSE: 0.1853
+2026-11-22 00:22:15,968 - INFO - PV_house_2: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:15,969 - INFO - PV_house_2: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:15,974 - INFO - PV_house_2: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:16,029 - INFO - PV_house_2 - MAE: 0.1045, RMSE: 0.1843
+2026-11-22 00:22:16,148 - INFO - PV_house_3: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:16,148 - INFO - PV_house_3: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:16,153 - INFO - PV_house_3: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:16,207 - INFO - PV_house_3 - MAE: 0.1055, RMSE: 0.1877
+2026-11-22 00:22:16,326 - INFO - PV_house_4: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:16,327 - INFO - PV_house_4: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:16,331 - INFO - PV_house_4: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:16,385 - INFO - PV_house_4 - MAE: 0.1078, RMSE: 0.1909
+2026-11-22 00:22:16,477 - INFO - Forecasting BESS
+2026-11-22 00:22:16,506 - INFO - BESS_house_1: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:16,507 - INFO - BESS_house_1: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:16,512 - INFO - BESS_house_1: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:16,566 - INFO - BESS_house_1 - MAE: 0.0764, RMSE: 0.1274
+2026-11-22 00:22:16,690 - INFO - BESS_house_2: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:16,691 - INFO - BESS_house_2: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:16,695 - INFO - BESS_house_2: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:16,749 - INFO - BESS_house_2 - MAE: 0.1232, RMSE: 0.1683
+2026-11-22 00:22:16,859 - INFO - BESS_house_3: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:16,860 - INFO - BESS_house_3: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:16,864 - INFO - BESS_house_3: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:16,918 - INFO - BESS_house_3 - MAE: 0.1010, RMSE: 0.1452
+2026-11-22 00:22:17,028 - INFO - BESS_house_4: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:22:17,029 - INFO - BESS_house_4: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:22:17,033 - INFO - BESS_house_4: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:22:17,087 - INFO - BESS_house_4 - MAE: 0.0679, RMSE: 0.0995
+2026-11-22 00:22:17,170 - INFO - Saved model metrics to results_covariate/results_belgium/Chronos2/Sampling_25/COV/Run_1/model_metrics_summary.csv
+2026-11-22 00:22:17,372 - INFO - ...End Chronos-2 forecasting...
+2026-11-22 00:22:17,372 - INFO - Forecasting completed in 3.46 seconds.

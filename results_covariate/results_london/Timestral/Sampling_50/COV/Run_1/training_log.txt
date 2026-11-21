@@ -1,9 +1,10 @@
-2026-11-20 22:16:38,338 - INFO - Logger initialized at results_covariate_5cov/results_london/Timestral/Sampling_50/COV/Run_1/training_log.txt
-2026-11-20 22:16:38,339 - INFO - ...Start Timestral forecasting...
-2026-11-20 22:16:38,339 - INFO - Forecasting London load
-2026-11-20 22:16:38,373 - INFO - london_load: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:16:38,376 - INFO - london_load: context=8658 steps, horizon=96, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:16:39,871 - INFO - london_load - MAE: 0.0241, RMSE: 0.0345
-2026-11-20 22:16:40,188 - INFO - Saved model metrics to results_covariate_5cov/results_london/Timestral/Sampling_50/COV/Run_1/model_metrics_summary.csv
-2026-11-20 22:16:40,300 - INFO - ...End Timestral forecasting...
-2026-11-20 22:16:40,300 - INFO - Forecasting completed in 1.96 seconds.
+2026-11-22 00:32:49,732 - INFO - Logger initialized at results_covariate/results_london/Timestral/Sampling_50/COV/Run_1/training_log.txt
+2026-11-22 00:32:49,732 - INFO - ...Start Timestral forecasting...
+2026-11-22 00:32:49,732 - INFO - Forecasting London load
+2026-11-22 00:32:49,771 - INFO - london_load: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:32:49,772 - INFO - london_load: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:32:49,778 - INFO - london_load: context=8658 steps, horizon=96, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:32:51,549 - INFO - london_load - MAE: 0.0239, RMSE: 0.0343
+2026-11-22 00:32:51,853 - INFO - Saved model metrics to results_covariate/results_london/Timestral/Sampling_50/COV/Run_1/model_metrics_summary.csv
+2026-11-22 00:32:51,961 - INFO - ...End Timestral forecasting...
+2026-11-22 00:32:51,961 - INFO - Forecasting completed in 2.23 seconds.

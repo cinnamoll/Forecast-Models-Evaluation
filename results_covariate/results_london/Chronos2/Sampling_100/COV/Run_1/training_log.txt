@@ -1,9 +1,10 @@
-2026-11-20 22:13:42,614 - INFO - Logger initialized at results_covariate_5cov/results_london/Chronos2/Sampling_100/COV/Run_1/training_log.txt
-2026-11-20 22:13:42,615 - INFO - ...Start Chronos-2 forecasting...
-2026-11-20 22:13:42,615 - INFO - Forecasting London load
-2026-11-20 22:13:42,654 - INFO - london_load: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:13:42,657 - INFO - london_load: context=17315 steps, horizon=192, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:13:43,620 - INFO - london_load - MAE: 0.0273, RMSE: 0.0411
-2026-11-20 22:13:43,941 - INFO - Saved model metrics to results_covariate_5cov/results_london/Chronos2/Sampling_100/COV/Run_1/model_metrics_summary.csv
-2026-11-20 22:13:44,059 - INFO - ...End Chronos-2 forecasting...
-2026-11-20 22:13:44,059 - INFO - Forecasting completed in 1.44 seconds.
+2026-11-22 00:24:23,940 - INFO - Logger initialized at results_covariate/results_london/Chronos2/Sampling_100/COV/Run_1/training_log.txt
+2026-11-22 00:24:23,940 - INFO - ...Start Chronos-2 forecasting...
+2026-11-22 00:24:23,940 - INFO - Forecasting London load
+2026-11-22 00:24:23,986 - INFO - london_load: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:24:23,987 - INFO - london_load: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:24:23,992 - INFO - london_load: context=17315 steps, horizon=192, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:24:25,093 - INFO - london_load - MAE: 0.0269, RMSE: 0.0401
+2026-11-22 00:24:25,460 - INFO - Saved model metrics to results_covariate/results_london/Chronos2/Sampling_100/COV/Run_1/model_metrics_summary.csv
+2026-11-22 00:24:25,580 - INFO - ...End Chronos-2 forecasting...
+2026-11-22 00:24:25,580 - INFO - Forecasting completed in 1.64 seconds.

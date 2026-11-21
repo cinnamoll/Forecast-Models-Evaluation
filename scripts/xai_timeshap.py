@@ -55,8 +55,9 @@ import pandas as pd
 if str(Path(__file__).resolve().parents[1]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from utils.covariates import (TIMESHAP_COLUMNS, attach_block, group_columns, restrict_columns,
-                              roles_for, scale_covariates, shift_past_only)
+from utils.covariates import (CYCLIC_CALENDAR, TIMESHAP_COLUMNS, attach_block, cyclic_calendar,
+                              cyclic_columns, expand_cyclic_names, group_columns,
+                              restrict_columns, roles_for, scale_covariates, shift_past_only)
 from utils.protocol import horizon_for, sampling_tag,steps_per_day
 from utils.timeshap import (apply_coalition, additivity_residual, covariate_players,
                             drop_noop_players, enumerate_game, group_shares,
@@ -123,11 +124,12 @@ def scaled_frame(frame: pd.DataFrame, level: str, horizon: int):
 
 
 def build_players(frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
-                  include_temporal: bool = True, per_variable: bool = False):
-    """Temporal players + one player per covariate block (or per column).
+                  include_temporal: bool = True, per_variable: bool = False,
+                  cycles: dict | None = None):
+    """Temporal players + one player per covariate block (or per variable).
 
     Returns ``(players, dropped)``.  Players whose perturbation would reproduce
-    the frame exactly (a column equal to its own hour-of-day slot, i.e. a no-op
+    the frame exactly (a column equal to its own phase profile, i.e. a no-op
     under ``mode="background"``) are dropped: their ``phi`` is identically zero,
     so they only double the game.
     """
@@ -138,7 +140,7 @@ def build_players(frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
     else:
         groups = group_columns([c for c in frame.columns if c not in ("unique_id", "ds", "y")])
         players += covariate_players(frame, groups, roles, n_context)
-    background = periodic_background(frame, per_day, train_end=n_context)
+    background = periodic_background(frame, per_day, train_end=n_context, cycles=cycles)
     return drop_noop_players(frame, players, background)
 
 
@@ -221,10 +223,10 @@ def make_predictor(model: str, frame: pd.DataFrame, roles: dict, horizon: int, f
 def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
             mode: str, predict, include_temporal: bool, out_dir: Path,
             sampling: float, level: str, per_variable: bool = False,
-            max_players: int = 12) -> dict:
+            max_players: int = 12, cycles: dict | None = None) -> dict:
     players, dropped = build_players(frame, roles, horizon, per_day,
                                      include_temporal=include_temporal,
-                                     per_variable=per_variable)
+                                     per_variable=per_variable, cycles=cycles)
     if dropped:
         logging.getLogger("timeshap").info(
             "%s: dropped no-op player(s) %s (replacing them with the hour-of-day "
@@ -235,7 +237,7 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
                          f"raise --max-players above {max_players} only if that cost is affordable, "
                          "or drop --per-covariate")
     n_context = len(frame) - horizon
-    background = periodic_background(frame, per_day, train_end=n_context)
+    background = periodic_background(frame, per_day, train_end=n_context, cycles=cycles)
 
     started = time.time()
     values = enumerate_game(
@@ -279,6 +281,7 @@ def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day:
         "additivity_residual": residual, "seconds": round(elapsed, 3),
         "temporal_players": include_temporal, "per_variable": per_variable,
         "noop_dropped": dropped,
+        "cyclic": bool(cycles), "cycles": dict(cycles or {}),
     }, indent=2), encoding="utf-8")
 
     logging.getLogger("timeshap").info("%s: %d players, %d coalitions in %.1fs, residual %.2e",
@@ -312,9 +315,17 @@ def main(argv=None) -> int:
                              "4-24 s, so the full 4+G game is hours per cell.")
     parser.add_argument("--per-covariate", "--per-variable", dest="per_variable",
                         action="store_true",
-                        help="One player per covariate column, on top of hist_d1..hist_d4 "
-                             "(5 columns -> 9 players -> 512 coalitions, so a full game stays "
+                        help="One player per covariate variable, on top of hist_d1..hist_d4 "
+                             "(5 variables -> 9 players -> 512 coalitions, so a full game stays "
                              "affordable).  --per-variable is the old name, kept as an alias.")
+    parser.add_argument("--cyclic", "--harmonic", dest="cyclic", action="store_true",
+                        help="Carry hour and dayofweek as (sin, cos) pairs on their natural "
+                             "period instead of integer codes: a numeric channel for every "
+                             "model, so Timestral stops target-encoding the clock into a "
+                             "climatology (which made its hour player phi == 0 exactly, "
+                             "because a relabeling of the codes is invisible to a per-category "
+                             "mean of the target).  Each pair stays ONE player, and its "
+                             "counterfactual is a shift of half a cycle (12 h / 3.5 days).")
     parser.add_argument("--covariates", nargs="+", default=list(TIMESHAP_COLUMNS),
                         metavar="COLUMN",
                         help="Covariate columns the game and the model input use.  Default: "
@@ -343,17 +354,31 @@ def main(argv=None) -> int:
             "attached %r to %s/%s - the loader scopes it to another task, so this game explains a "
             "model WITH that channel, not the benchmark's input mapping for this series",
             column, args.dataset, args.series)
+
+    cycles: dict = {}
+    requested = list(args.covariates)
+    if args.cyclic:
+        frame, cycles = cyclic_calendar(frame, steps_per_day=per_day)
+        requested = expand_cyclic_names(requested, cycles)
+        replaced = [base for base in CYCLIC_CALENDAR if cyclic_columns(base)[0] in cycles]
+        logging.getLogger("timeshap").info(
+            "cyclic calendar: %s replaced by %s; each pair is one player and its "
+            "counterfactual is a shift of half a cycle (%s rows)",
+            ", ".join(replaced),
+            ", ".join(name for base in replaced for name in cyclic_columns(base)),
+            ", ".join(str(cycles[cyclic_columns(base)[0]]) for base in replaced))
+
     scaled, roles = scaled_frame(frame, args.level, horizon)
-    if args.covariates:
-        scaled, roles = restrict_columns(scaled, roles, args.covariates)
+    if requested:
+        scaled, roles = restrict_columns(scaled, roles, requested)
     freq = f"{int(15 * (100 / args.sampling))}min"
 
     logging.getLogger("timeshap").info(
-        "covariates (%d): %s", len(args.covariates), ", ".join(args.covariates))
+        "covariates (%d): %s", len(requested), ", ".join(requested))
 
     players, dropped = build_players(scaled, roles, horizon, per_day,
                                      include_temporal=not args.covariate_only,
-                                     per_variable=args.per_variable)
+                                     per_variable=args.per_variable, cycles=cycles)
     logging.getLogger("timeshap").info(
         "%s/%s: %d points, horizon %d, %d players -> %d coalitions",
         args.dataset, args.series, len(scaled), horizon, len(players), 2 ** len(players))
@@ -367,8 +392,9 @@ def main(argv=None) -> int:
             print(f"  {player.name:14s} {player.kind:10s} rows={player.size:5d} columns={len(player.columns)}")
         return 0
 
+    tag = sampling_tag(args.sampling) + ("_harmonic" if args.cyclic else "")
     out_dir = args.out or (Path(__file__).resolve().parents[1] / "results_covariate" / "xai_timeshap" / args.dataset /
-                           f"{args.series}_{args.level}_{sampling_tag(args.sampling)}")
+                           f"{args.series}_{args.level}_{tag}")
     shares_rows, notes = {}, {}
     for model in args.models:
         params_path = args.params_dir / f"{model}_{args.dataset}_{args.level}_{sampling_tag(args.sampling)}.json"
@@ -391,7 +417,8 @@ def main(argv=None) -> int:
                                         args.gpu, params, args.level)
             result = explain(model, scaled, roles, horizon, per_day, args.mode, predict,
                              include_temporal, out_dir / model, args.sampling, args.level,
-                             per_variable=args.per_variable, max_players=args.max_players)
+                             per_variable=args.per_variable, max_players=args.max_players,
+                             cycles=cycles)
         except Exception as error:  # one model must not kill the whole report
             logging.getLogger("timeshap").error("%s failed: %s", model, error, exc_info=True)
             notes[model] = f"failed: {error}"

@@ -1,9 +1,10 @@
-2026-11-20 22:15:37,875 - INFO - Logger initialized at results_covariate_5cov/results_germany/Timestral/Sampling_25/COV/Run_1/training_log.txt
-2026-11-20 22:15:37,875 - INFO - ...Start Timestral forecasting...
-2026-11-20 22:15:37,875 - INFO - Forecasting Germany load
-2026-11-20 22:15:37,903 - INFO - germany_load: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:15:37,906 - INFO - germany_load: context=2136 steps, horizon=48, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:15:38,909 - INFO - germany_load - MAE: 0.0735, RMSE: 0.1861
-2026-11-20 22:15:39,240 - INFO - Saved model metrics to results_covariate_5cov/results_germany/Timestral/Sampling_25/COV/Run_1/model_metrics_summary.csv
-2026-11-20 22:15:39,371 - INFO - ...End Timestral forecasting...
-2026-11-20 22:15:39,371 - INFO - Forecasting completed in 1.50 seconds.
+2026-11-22 00:31:48,253 - INFO - Logger initialized at results_covariate/results_germany/Timestral/Sampling_25/COV/Run_1/training_log.txt
+2026-11-22 00:31:48,253 - INFO - ...Start Timestral forecasting...
+2026-11-22 00:31:48,253 - INFO - Forecasting Germany load
+2026-11-22 00:31:48,295 - INFO - germany_load: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:31:48,296 - INFO - germany_load: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:31:48,305 - INFO - germany_load: context=2136 steps, horizon=48, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:31:49,357 - INFO - germany_load - MAE: 0.0724, RMSE: 0.1860
+2026-11-22 00:31:49,670 - INFO - Saved model metrics to results_covariate/results_germany/Timestral/Sampling_25/COV/Run_1/model_metrics_summary.csv
+2026-11-22 00:31:49,792 - INFO - ...End Timestral forecasting...
+2026-11-22 00:31:49,792 - INFO - Forecasting completed in 1.54 seconds.

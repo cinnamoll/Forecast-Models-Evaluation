@@ -1,15 +1,18 @@
-2026-11-20 22:14:31,944 - INFO - Logger initialized at results_covariate_5cov/results_zonnedael/Chronos2/Sampling_100/COV/Run_1/training_log.txt
-2026-11-20 22:14:31,944 - INFO - ...Start Chronos-2 forecasting...
-2026-11-20 22:14:31,945 - INFO - Forecasting Zonnedael customers
-2026-11-20 22:14:32,023 - INFO - zonnedael_customer_8: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:14:32,026 - INFO - zonnedael_customer_8: context=17184 steps, horizon=192, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:14:32,970 - INFO - zonnedael_customer_8 - MAE: 0.0515, RMSE: 0.1144
-2026-11-20 22:14:33,382 - INFO - zonnedael_customer_9: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:14:33,385 - INFO - zonnedael_customer_9: context=17184 steps, horizon=192, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:14:33,522 - INFO - zonnedael_customer_9 - MAE: 0.0431, RMSE: 0.0898
-2026-11-20 22:14:33,726 - INFO - zonnedael_customer_43: covariate set restricted to hour, dayofweek, temperature, humidity, cloud_cover
-2026-11-20 22:14:33,729 - INFO - zonnedael_customer_43: context=17184 steps, horizon=192, covariates: 2 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
-2026-11-20 22:14:33,848 - INFO - zonnedael_customer_43 - MAE: 0.0329, RMSE: 0.0656
-2026-11-20 22:14:33,993 - INFO - Saved model metrics to results_covariate_5cov/results_zonnedael/Chronos2/Sampling_100/COV/Run_1/model_metrics_summary.csv
-2026-11-20 22:14:34,167 - INFO - ...End Chronos-2 forecasting...
-2026-11-20 22:14:34,167 - INFO - Forecasting completed in 2.22 seconds.
+2026-11-22 00:25:10,591 - INFO - Logger initialized at results_covariate/results_zonnedael/Chronos2/Sampling_100/COV/Run_1/training_log.txt
+2026-11-22 00:25:10,591 - INFO - ...Start Chronos-2 forecasting...
+2026-11-22 00:25:10,591 - INFO - Forecasting Zonnedael customers
+2026-11-22 00:25:10,678 - INFO - zonnedael_customer_8: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:25:10,679 - INFO - zonnedael_customer_8: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:25:10,684 - INFO - zonnedael_customer_8: context=17184 steps, horizon=192, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:25:11,626 - INFO - zonnedael_customer_8 - MAE: 0.0517, RMSE: 0.1146
+2026-11-22 00:25:11,996 - INFO - zonnedael_customer_9: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:25:11,997 - INFO - zonnedael_customer_9: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:25:12,002 - INFO - zonnedael_customer_9: context=17184 steps, horizon=192, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:25:12,158 - INFO - zonnedael_customer_9 - MAE: 0.0426, RMSE: 0.0890
+2026-11-22 00:25:12,323 - INFO - zonnedael_customer_43: cyclic calendar for dayofweek_cos, dayofweek_sin, hour_cos, hour_sin
+2026-11-22 00:25:12,324 - INFO - zonnedael_customer_43: covariate set restricted to hour_sin, hour_cos, dayofweek_sin, dayofweek_cos, temperature, humidity, cloud_cover
+2026-11-22 00:25:12,329 - INFO - zonnedael_customer_43: context=17184 steps, horizon=192, covariates: 4 known-future, 3 past-only, 0 static dropped (no per-series channel in this checkpoint)
+2026-11-22 00:25:12,483 - INFO - zonnedael_customer_43 - MAE: 0.0328, RMSE: 0.0658
+2026-11-22 00:25:12,578 - INFO - Saved model metrics to results_covariate/results_zonnedael/Chronos2/Sampling_100/COV/Run_1/model_metrics_summary.csv
+2026-11-22 00:25:12,710 - INFO - ...End Chronos-2 forecasting...
+2026-11-22 00:25:12,710 - INFO - Forecasting completed in 2.12 seconds.
