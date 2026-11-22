@@ -27,10 +27,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
-try:
-    from utils.tuning import tuned_resolution
-except ModuleNotFoundError:  # the tuning flow left the repo with the trainable models
-    def tuned_resolution(_results_root, _model, _dataset, _level, _sampling):
+
+def tuned_resolution(_results_root, _model, _dataset, _level, _sampling):
         """Placeholder: ``TUNED_MODELS`` is empty, so no cell asks for a parameter file."""
         return Path("__no_tuned_parameters__"), None
 
