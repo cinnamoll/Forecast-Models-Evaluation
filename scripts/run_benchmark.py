@@ -27,23 +27,18 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
+from utils.tuning import tuned_resolution
 
-def tuned_resolution(_results_root, _model, _dataset, _level, _sampling):
-        """Placeholder: ``TUNED_MODELS`` is empty, so no cell asks for a parameter file."""
-        return Path("__no_tuned_parameters__"), None
-
-
-#: Covariate flow of ``plan/scripts.md``: three zero-shot TSFMs.  Nothing is
-#: trained and nothing is tuned — the covariate block is an input mapping, so a
-#: COV cell is one forward pass of the checkpoint.  LightGBM, DeepNPTS, TCN and
-#: TFT are deliberately out of this flow.
-COV_MODELS = ("Chronos2", "Timestral", "TimesFM3")
+#: Every model a cell may run: the five trainable ones of the transfer flow
+#: (LightGBM, DeepNPTS, TCN, TFT, TimeXer) and the three zero-shot checkpoints.
+MODEL_ORDER = ("LightGBM", "DeepNPTS", "TCN", "TFT", "TimeXer",
+               "Chronos2", "Timestral", "TimesFM3")
 
 #: Models whose refit accepts ``--params_json``; the zero-shot ones take none.
-#: Empty under the current plan: no model of the covariate flow is trained, so no
-#: cell loads a tuned parameter file.  ``scripts/tune_optuna.py`` still exists for
-#: the trainable models if they ever come back into scope.
-TUNED_MODELS = ()
+#: Their parameters come from ``scripts/tune_optuna.py`` and are looked up through
+#: ``utils/tuning.py``: London runs on Zonnedael's search, Belgium's eight series
+#: on PV house 1's.
+TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN", "TFT")
 
 def cell_dir(dataset: str, model: str, sampling: float, level: str, results_dir) -> Path:
     base = PROJECT_ROOT / results_dir / f"results_{dataset}" / model / f"Sampling_{sampling_tag(sampling)}"
@@ -73,6 +68,8 @@ def command_for(dataset: str, model: str, sampling: float, level: str, results_d
                 "flags": ["--models", "TCN", "--epochs", "100"]},
         "TFT": {"env": "gluonts", "script": "models/models_gluonts.py",
                 "flags": ["--models", "TemporalFusionTransformer", "--epochs", "100"]},
+        "TimeXer": {"env": "neuralforecast", "script": "models/model_timexer.py",
+                    "flags": ["--epochs", "100"]},
         "Chronos2": {"env": "chronos", "script": "models/fmodel_chronos2.py", "flags": []},
         "Timestral": {"env": "chronos", "script": "models/fmodel_timestral.py", "flags": []},
         "TimesFM3": {"env": "timesfm3", "script": "models/fmodel_timesfm3.py", "flags":[]}
@@ -112,8 +109,8 @@ def main(argv=None) -> int:
     sampling_rates = (25.0, 100.0 / 3.0, 50.0, 100.0)
 
     parser = argparse.ArgumentParser(description="Run the covariate benchmark.")
-    parser.add_argument("--models", nargs="+", choices=list(COV_MODELS), default=None,
-                        help="Default: COV_MODELS at --level COV, every model at --level L0.")
+    parser.add_argument("--models", nargs="+", choices=list(MODEL_ORDER), default=None,
+                        help="Default: every model in MODEL_ORDER.")
     parser.add_argument("--datasets", nargs="+", choices=list(datasets), default=list(datasets))
     parser.add_argument("--samplings", nargs="+", type=float, default=list(sampling_rates))
     parser.add_argument("--level", choices=list(("L0", "COV")), default="COV")
@@ -127,13 +124,10 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     results_dir = args.results_dir.resolve()
 
-    # The covariate flow runs the zero-shot checkpoints only; the trainable models
-    # stay in the L0 flow that reproduces the paper's table.
-    models = list(args.models) if args.models else list(COV_MODELS)
-    off_plan = [model for model in models if model not in COV_MODELS]
-    if off_plan:
-        parser.error(f"--level {args.level} runs only {'/'.join(COV_MODELS)}; "
-                     f"out of scope: {', '.join(off_plan)}")
+    # Every model may run at either level: the four trainable models are the
+    # transfer flow (COV = covariates + tuned parameters, L0 = the paper's
+    # baseline), the three checkpoints are zero-shot at both.
+    models = list(args.models) if args.models else list(MODEL_ORDER)
 
     executed = skipped = 0
     for dataset in args.datasets:
