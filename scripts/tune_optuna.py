@@ -165,11 +165,42 @@ def suggest_tft(trial) -> dict:
     }
 
 
+def suggest_timexer(trial) -> dict:
+    """TimeXer: the patch geometry and the encoder size, not the protocol.
+
+    ``patch_len`` is searched because it decides how many temporal tokens the
+    encoder sees for a fixed window: ``patch_num = input_size // patch_len``, i.e.
+    32/24/16/12 tokens for a 384-point window at the four values below.  Every
+    value divides ``input_size`` there, so no trial silently pads.  ``n_heads``
+    comes from a set that divides every ``hidden_size`` candidate (4 and 8 all
+    divide 128/256/512), because an indivisible pair raises inside the attention
+    layer instead of scoring badly.
+
+    Not searched, on purpose: ``n_series`` (the model is fitted one series at a
+    time), ``use_norm`` and ``factor`` (architecture switches that the published
+    cells keep at their defaults, so a tuned file stays a hyper-parameter set),
+    and ``h``/``input_size``/``max_steps`` (protocol: the window and the budget
+    are not hyper-parameters).
+    """
+    return {
+        "hidden_size": trial.suggest_categorical("hidden_size", [32, 64, 128, 256]),
+        "input_size": trial.suggest_categorical("input_size", [48, 64, 96, 192]),
+        "n_heads": trial.suggest_categorical("n_heads", [2, 4, 8]),
+        "e_layers": trial.suggest_int("e_layers", 1, 2),
+        "d_ff": trial.suggest_int("d_ff", 128, 1024, step=128),
+        "patch_len": trial.suggest_categorical("patch_len", [12, 16, 24, 48]),
+        "dropout": trial.suggest_float("dropout", 0.1, 0.5),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-4, 3e-3, log=True),
+        "batch_size": trial.suggest_categorical("batch_size", [32, 64, 128]),
+    }
+
+
 SUGGESTERS = {
     "LightGBM": suggest_lightgbm,
     "DeepNPTS": suggest_deepnpts,
     "TCN": suggest_tcn,
     "TFT": suggest_tft,
+    "TimeXer": suggest_timexer,
 }
 
 #: Values every trial gets, whatever it sampled.  They are not suggestions, so
@@ -338,12 +369,17 @@ def neuralforecast_objective(model_class, params, frame, windows, steps, freq, s
         horizon = eval_end - train_end
         kwargs = dict(h=horizon, input_size=horizon * 2, max_steps=int(steps),
                       random_seed=seed, **lightning_device_config(gpu), **params)
+        if getattr(model_class, "MULTIVARIATE", False):
+            # nf's multivariate classes need the stack width; the tuner fits one series.
+            kwargs.setdefault("n_series", 1)
         exog = {}
-        if roles["past_only"]:
+        # Same rule as models/models_neuralforecast.py: a channel the class does not
+        # declare is not passed, otherwise nf raises instead of letting the trial score.
+        if roles["past_only"] and getattr(model_class, "EXOGENOUS_HIST", True):
             exog["hist_exog_list"] = roles["past_only"]
-        if roles["known_future"]:
+        if roles["known_future"] and getattr(model_class, "EXOGENOUS_FUTR", True):
             exog["futr_exog_list"] = roles["known_future"]
-        if roles["static"]:
+        if roles["static"] and getattr(model_class, "EXOGENOUS_STAT", True):
             exog["stat_exog_list"] = roles["static"]
         kwargs.update(exog)
 
@@ -579,6 +615,18 @@ def main(argv=None) -> int:
         # implied 30.
         frame = frame.iloc[::stride].reset_index(drop=True)
     windows = validation_windows(len(frame), horizon, per_day, 14)
+    if args.model == "TimeXer":
+        # Tune on the same covariate table the reported cell will run on, otherwise
+        # the parameters are searched for a different input mapping.  static_* is not
+        # in that set, and the variant has no channel for it.
+        from models.model_timexer import BELGIUM_COVARIATES, DEFAULT_COVARIATES
+        wanted = BELGIUM_COVARIATES if dataset == "belgium_pv1" else DEFAULT_COVARIATES
+        labels = [c for c in ("unique_id", "ds", "y") if c in frame.columns]
+        keep = labels + [c for c in wanted if c in frame.columns]
+        dropped = [c for c in frame.columns if c not in keep]
+        frame = frame[keep]
+        log.info("TimeXer: covariate set %s (dropped: %s)",
+                 [c for c in keep if c not in labels], dropped)
     log.info("%s/%s: %d points, %s, horizon %d, %d validation window(s) of %d steps",
              args.model, dataset, len(frame), freq, horizon, len(windows), horizon)
 
@@ -612,7 +660,13 @@ def main(argv=None) -> int:
     else:
         import neuralforecast.models as nf_models
 
-        model_class = getattr(nf_models, args.model)
+        if args.model == "TimeXer":
+            # The variant that reads measured covariates, i.e. the class the reported
+            # cell runs, so tuned values land on the same architecture.
+            from models.models_neuralforecast import TimeXerHist
+            model_class = TimeXerHist
+        else:
+            model_class = getattr(nf_models, args.model)
 
         def objective(trial):
             params = expand_params(args.model, SUGGESTERS[args.model](trial))

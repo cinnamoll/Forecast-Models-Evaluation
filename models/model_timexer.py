@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import json
 import logging
 import sys
 import warnings
@@ -115,7 +116,7 @@ def restrict_covariates(frame, model_name: str, covariates, level: str):
 
 def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, freq,
                      forecast_horizon, sampling_rate, epochs, gpu, level="L0",
-                     covariates=None):
+                     covariates=None, params_override=None):
     """Run TimeXer on every series of ``dataset_name`` at one sampling rate."""
     setup_model_logger(save_dir)
     if covariates is None:
@@ -135,7 +136,8 @@ def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, freq,
             len(roles["past_only"]), len(roles["static"]))
         _, mae, rmse = neural_forecast_model(
             frame, series_name, save_dir, freq, forecast_horizon, sampling_rate,
-            epochs, gpu, nf_model_name=MODEL_NAME, NFmodel=TimeXerHist, level=level)
+            epochs, gpu, nf_model_name=MODEL_NAME, NFmodel=TimeXerHist, level=level,
+            params_override=params_override)
         metrics.append({"model": series_name.lower(), "MAE": mae, "RMSE": rmse})
 
     if dataset_name == "belgium":
@@ -169,7 +171,7 @@ def train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, freq,
 
 def paper_forecasting_train(dataset_name, dataset, run_num, sampling_rate, epochs, gpu,
                             results_dir=PROJECT_ROOT / "results", level="L0",
-                            covariates=None):
+                            covariates=None, params_override=None):
     warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
     start_dt, end_dt = PAPER_WINDOW
     base_step = DATASET_STEP_MINUTES[dataset_name]
@@ -179,7 +181,8 @@ def paper_forecasting_train(dataset_name, dataset, run_num, sampling_rate, epoch
                        epochs=epochs, style="epochs", exog_level=level)
     try:
         train_all_models(dataset_name, dataset, start_dt, end_dt, save_dir, freq,
-                         forecast_horizon, sampling_rate, epochs, gpu, level, covariates)
+                         forecast_horizon, sampling_rate, epochs, gpu, level, covariates,
+                         params_override)
     except Exception as error:  # one failed series must not lose the others' numbers
         logging.error("TimeXer run %s at %s%% failed: %s", run_num, sampling_rate,
                       error, exc_info=True)
@@ -212,12 +215,20 @@ if __name__ == "__main__":
                              "hour dayofweek humidity temperature cloud_cover "
                              "(Belgium adds day_ahead_price soc). static_* is refused.")
     parser.add_argument("--gpu", type=int, default=-1, help=GPU_HELP)
+    parser.add_argument("--params_json", type=Path, default=None,
+                        help="Tuned parameters (JSON) from scripts/tune_optuna.py; "
+                             "protocol keys (h, input_size, max_steps, n_series) are ignored.")
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results",
                         help="Root directory for generated results.")
     args = parser.parse_args()
     dataset = dataset_classes[args.dataset]()
+    tuned = {}
+    if args.params_json and args.params_json.exists():
+        payload = json.loads(args.params_json.read_text(encoding="utf-8"))
+        tuned = dict(payload.get("best_params", payload))
     for sampling_rate in args.sampling_rates:
         for run_num in range(1, args.runs + 1):
             paper_forecasting_train(args.dataset, dataset, run_num, sampling_rate,
                                     args.epochs, args.gpu, args.results_dir,
-                                    level=args.exog_level, covariates=args.covariates)
+                                    level=args.exog_level, covariates=args.covariates,
+                                    params_override=tuned or None)

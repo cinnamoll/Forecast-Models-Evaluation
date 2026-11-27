@@ -38,7 +38,7 @@ MODEL_ORDER = ("LightGBM", "DeepNPTS", "TCN", "TFT", "TimeXer",
 #: Their parameters come from ``scripts/tune_optuna.py`` and are looked up through
 #: ``utils/tuning.py``: London runs on Zonnedael's search, Belgium's eight series
 #: on PV house 1's.
-TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN", "TFT")
+TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN", "TFT", "TimeXer")
 
 def cell_dir(dataset: str, model: str, sampling: float, level: str, results_dir) -> Path:
     base = PROJECT_ROOT / results_dir / f"results_{dataset}" / model / f"Sampling_{sampling_tag(sampling)}"

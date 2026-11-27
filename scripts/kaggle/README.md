@@ -6,6 +6,7 @@ Ba file, một việc mỗi file:
 |---|---|
 | `01_setup.sh` | Miniforge + 2 conda env, probe torch CUDA, ghi env file, dry run |
 | `02_run.py` | gọi `scripts/run_benchmark.py` và **thêm `--gpu`** (runner không tự truyền) |
+| `03_tune.sh` | Optuna search cho 4 model (`scripts/tune_optuna.py`), resume theo study |
 | `README.md` | các cell copy-paste |
 
 `scripts/run_benchmark.py` là dispatcher: nó shell ra `conda run -n <env> python models/<script>.py`.
@@ -23,8 +24,9 @@ Vì vậy env phải là conda thật, đúng tên trong `command_for`:
 Code phải nằm trên remote thì cell clone mới thấy: `scripts/kaggle/` và các sửa đổi TimeXer hiện **chưa commit**.
 
 ```bash
-git add scripts/kaggle models/model_timexer.py models/models_neuralforecast.py
-git commit -m "kaggle runner + TimeXer historical covariates"
+git add scripts/kaggle models/model_timexer.py models/models_neuralforecast.py \
+        scripts/tune_optuna.py scripts/run_benchmark.py
+git commit -m "kaggle runner + TimeXer historical covariates + TimeXer tuning"
 git push
 ```
 
@@ -67,7 +69,24 @@ Env conda nằm ở `/tmp/miniforge3` → **mất khi session kết thúc**. Mu�
 
 Mỗi dòng lệnh phải kết thúc bằng `--gpu 0`; nếu không, GPU đang bị bỏ không.
 
-## Cell 4 — chạy thật
+## Cell 4 — tune (bỏ qua nếu chấp nhận paper defaults)
+
+`run_benchmark.py` chỉ truyền `--params_json` khi tìm thấy `<RESULTS>/tuning/<Model>_<set>_<LEVEL>_<tag>_v2.json`
+(`utils/tuning.py`). Không tune thì 4 model chạy paper defaults — vẫn hợp lệ, chỉ khác "tuned".
+
+```python
+!cd /kaggle/working/Forecast-Models-Evaluation && source /kaggle/working/env.sh && \
+    MODELS="TimeXer TFT TCN DeepNPTS" TRIALS=30 HOURS=1.5 bash scripts/kaggle/03_tune.sh
+```
+
+- 4 model × 3 tuning set (`germany`, `zonnedael9`, `belgium_pv1`) × 30 trial. Study lưu trong `$RESULTS/tuning/optuna.db`,
+  nên session sau chạy lại cùng lệnh là **cộng thêm trial**, không mất kết quả; study đã đủ `TRIALS` thì `SKIP`.
+- TimeXer tune trên đúng 5 biến của cell báo cáo (Belgium thêm price/soc), không `static_*`, và dùng `TimeXerHist`
+  → params tìm được khớp với lúc chạy thật.
+- Xem trước không tốn GPU: `DRY=1 MODELS="TimeXer" TUNE_SETS="germany" bash scripts/kaggle/03_tune.sh`.
+- Thứ tự đúng: tune ở `SAMPLING=100` (mặc định) → sweep ở mọi sampling sẽ dùng lại file 100% cho các mức khác.
+
+## Cell 5 — chạy thật
 
 ```python
 # một dataset, một sampling: 4 model × 10 run
@@ -92,7 +111,7 @@ Chạy nền để không giữ cell (session vẫn phải còn sống):
     > /kaggle/working/run_germany.log 2>&1 &
 ```
 
-## Cell 5 — theo dõi
+## Cell 6 — theo dõi
 
 ```python
 !tail -n 20 /kaggle/working/run_germany.log
@@ -114,5 +133,8 @@ là **vài ngày**, vượt xa một session 9-12 h → chia theo dataset, dựa
   Muốn 4 model cùng một bộ biến thì phải thêm flag đó vào `models_neuralforecast.py` và `models_gluonts.py`.
 - `--covariates` của runner chỉ an toàn với model có flag đó; truyền nó cho TCN/TFT sẽ làm script thoát mã 2.
 - `runs_for()` cố định 10 run cho cả 4 model; cell thiếu run bị chạy lại **từ run 1** (không nối tiếp run dang dở).
-- Không có tuned params trong `results/.../tuning/` → chạy paper defaults (dry run in ra `note: no tuned parameters`).
+- Chỉ cell nào có JSON trong `<RESULTS>/tuning/` mới chạy tuned params; TimeXer đã nằm trong `TUNED_MODELS` và
+  `models/model_timexer.py` đã nhận `--params_json`. Chưa tune → dry run in `note: no tuned parameters for ...`.
+- `SPACE_VERSION` vẫn là 2 (không bump) để các file tuned cũ của LightGBM/TCN/TFT/DeepNPTS còn dùng được; space của
+  TimeXer là mới nên không đụng tên file cũ.
 - `gluonts` env là python 3.7 + mxnet-cu112: build lâu nhất và dễ vỡ nhất; chạy TFT ở session riêng nếu setup quá lâu.
