@@ -7,6 +7,7 @@ Ba file, một việc mỗi file:
 | `01_setup.sh` | Miniforge + 2 conda env, probe torch CUDA, ghi env file, dry run |
 | `02_run.py` | gọi `scripts/run_benchmark.py` và **thêm `--gpu`** (runner không tự truyền) |
 | `03_tune.sh` | Optuna search cho 4 model (`scripts/tune_optuna.py`), resume theo study |
+| `04_xai.sh` | TimeSHAP (`scripts/xai_timeshap.py`), per-variable players, resume theo model |
 | `README.md` | các cell copy-paste |
 
 `scripts/run_benchmark.py` là dispatcher: nó shell ra `conda run -n <env> python models/<script>.py`.
@@ -85,6 +86,8 @@ Mỗi dòng lệnh phải kết thúc bằng `--gpu 0`; nếu không, GPU đang 
   → params tìm được khớp với lúc chạy thật.
 - Xem trước không tốn GPU: `DRY=1 MODELS="TimeXer" TUNE_SETS="germany" bash scripts/kaggle/03_tune.sh`.
 - Thứ tự đúng: tune ở `SAMPLING=100` (mặc định) → sweep ở mọi sampling sẽ dùng lại file 100% cho các mức khác.
+- 12 study × `HOURS=1.5` = 18 h, dài hơn một session 9-12 h: chia bằng `MODELS=` (ví dụ `MODELS="TimeXer TCN"` = 6 study ≈ 9 h)
+  hoặc giảm `HOURS`; mỗi study ghi JSON ngay khi hết giờ nên chạy lại chỉ cộng thêm trial.
 
 ## Cell 5 — chạy thật
 
@@ -94,7 +97,7 @@ Mỗi dòng lệnh phải kết thúc bằng `--gpu 0`; nếu không, GPU đang 
     --models TimeXer TFT TCN DeepNPTS --datasets germany --samplings 25 --level COV
 ```
 
-Mở rộng dần (resume tự động — cell nào đủ 10 run thì bị SKIP, xem Cell 5):
+Mở rộng dần (resume tự động — cell nào đủ 10 run thì bị SKIP, xem Cell 7):
 
 ```python
 # thêm sampling
@@ -111,7 +114,26 @@ Chạy nền để không giữ cell (session vẫn phải còn sống):
     > /kaggle/working/run_germany.log 2>&1 &
 ```
 
-## Cell 6 — theo dõi
+## Cell 6 — XAI (TimeSHAP, per-variable)
+
+```python
+# in ra trước: player set + số coalition, không tốn GPU
+!cd /kaggle/working/Forecast-Models-Evaluation && source /kaggle/working/env.sh && \
+    DRY=0 XAI_DRY_CHECK=1 DATASETS="london" bash scripts/kaggle/04_xai.sh
+
+# chạy thật
+!cd /kaggle/working/Forecast-Models-Evaluation && source /kaggle/working/env.sh && \
+    DATASETS="germany london" MODELS="Chronos2 Timestral TimesFM3" bash scripts/kaggle/04_xai.sh
+```
+
+- Game liệt kê **đúng** (không sampling): mỗi cell là `2^players` lần gọi model. London/COV với 5 biến
+  + 4 player thời gian = 9 player → 512 coalition (đã đo bằng `--dry-run`), nên rất rẻ; Belgium 8 series thì ×8.
+- `PER_VARIABLE=1` (mặc định) → mỗi biến là một player riêng, không gộp block.
+- Chỉ 3 checkpoint có predictor trong `make_predictor()`: `Chronos2`, `Timestral` (env `chronos`), `TimesFM3` (env `timesfm3`).
+  `TFT`, `LightGBM`, `TCN`, `DeepNPTS`, `TimeXer` bị `--models` từ chối — docstring của script có nhắc chúng nhưng code chưa có nhánh.
+- Resume theo `(dataset, series, model)`: có `coalitions.json` là SKIP; log trong `$XAI_OUT/logs/`.
+
+## Cell 7 — theo dõi
 
 ```python
 !tail -n 20 /kaggle/working/run_germany.log
