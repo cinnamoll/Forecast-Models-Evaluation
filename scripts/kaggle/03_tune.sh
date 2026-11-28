@@ -2,7 +2,7 @@
 # Optuna search for the four COV models on a hosted GPU, one study at a time.
 #
 #   bash scripts/kaggle/03_tune.sh                      # 4 models x 3 tuning sets @ 100%
-#   MODELS="TimeXer TCN" bash scripts/kaggle/03_tune.sh
+#   MODELS="LightGBM" bash scripts/kaggle/03_tune.sh
 #   TRIALS=50 HOURS=6 bash scripts/kaggle/03_tune.sh    # a longer budget
 #   DRY=1 bash scripts/kaggle/03_tune.sh                # print the commands
 #
@@ -22,7 +22,7 @@ REPO_DIR="${REPO_DIR:-/kaggle/working/Forecast-Models-Evaluation}"
 RESULTS="${RESULTS:-/kaggle/working/results}"
 LEVEL="${LEVEL:-COV}"
 SAMPLING="${SAMPLING:-100}"
-MODELS="${MODELS:-TimeXer TFT TCN DeepNPTS}"
+MODELS="${MODELS:-LightGBM}"
 TUNE_SETS="${TUNE_SETS:-germany zonnedael9 belgium_pv1}"
 TRIALS="${TRIALS:-30}"
 HOURS="${HOURS:-1.5}"
@@ -38,8 +38,8 @@ mkdir -p "$LOG_DIR"
 
 env_for() {  # model -> conda env, the same map scripts/run_benchmark.py uses
   case "$1" in
-    TFT) echo gluonts ;;
-    *) echo neuralforecast ;;
+    LightGBM) echo statsml ;;
+    *) echo "unknown model $1 (tunable: LightGBM)" >&2; return 2 ;;
   esac
 }
 

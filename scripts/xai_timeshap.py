@@ -15,27 +15,20 @@ and is the robustness check the proposal asks for.
 
 Which models can be explained, and how:
 
-* ``LightGBM`` — one fitted booster over the row's own design matrix, so a
-  coalition is a new matrix; its matrix has **no lag**, so a covariate-only game
-  is the honest one (reported, not hidden).
-* ``TFT`` — a trained GluonTS predictor predicts on a new ``ListDataset``.
-* ``TCN`` / ``DeepNPTS`` / ``TimeXer`` — NeuralForecast freezes the context and
-  ``hist_exog`` into the fitted dataset, so the game re-runs the fitted module on
-  a window built by ``utils/xai_predictors.py``; that path reproduces
-  ``nf.predict()`` bit for bit (max |diff| = 0.0 on a synthetic cell), so no
-  refit per coalition is needed.  ``TimeXer`` is explained through ``TimeXerHist``,
-  the class the benchmark cell runs.
+* ``LightGBM`` — one fitted booster over the row's own design matrix (covariates
+  shifted back one horizon, plus the target's own lags and rolling statistics), so
+  a coalition is a new matrix.  Its history channel is real now, which is why the
+  temporal players are no longer structurally zero.
+* ``Chronos2`` / ``Timestral`` / ``TimesFM3`` — zero-shot checkpoints: a coalition
+  is another covariate array, so nothing is fitted per coalition.
 
 Usage
 -----
     conda run -n statsml python scripts/xai_timeshap.py \
         --dataset london --series london_load --model LightGBM
 
-    conda run -n gluonts python scripts/xai_timeshap.py \
-        --dataset belgium --series pv_house_1 --model TFT
-
     conda run -n chronos python scripts/xai_timeshap.py \
-        --dataset germany --series germany_load --model Chronos2 Timestral
+        --dataset germany --series germany_load --model Chronos2 Timestral TimesFM3
 """
 
 from __future__ import annotations
@@ -65,8 +58,14 @@ from utils.timeshap import (apply_coalition, additivity_residual, covariate_play
 
 #: Models whose explanation needs no refit: a new input mapping for the zero-shot
 #: checkpoints, exact TreeSHAP for LightGBM.
-CLEAN_GAME_MODELS = ("LightGBM", "TFT", "Chronos2", "Timestral", "TimesFM3",
-                     "TCN", "DeepNPTS", "TimeXer")
+CLEAN_GAME_MODELS = ("LightGBM", "Chronos2", "Timestral", "TimesFM3")
+
+#: Models whose input mapping has no target-history channel (a direct regressor reads the
+#: row's covariates only).  Perturbing a day of the target history cannot change their
+#: forecast, so that player's phi is 0 by construction; a game that has to be comparable
+#: with the checkpoints therefore runs with covariate players only for *every* model in
+#: the run instead of handing LightGBM free zeros.
+NO_HISTORY_CHANNEL = ("LightGBM",)
 
 #: Default model set: the covariate flow of ``plan/scripts.md`` covers these three
 #: zero-shot checkpoints only.  Nothing is trained, so there is nothing to tune.
@@ -219,30 +218,13 @@ def make_predictor(model: str, frame: pd.DataFrame, roles: dict, horizon: int, f
     if model == "TimesFM3":
         return timesfm3_predictor(frame, roles, horizon, gpu, level), True
 
-    # Trainable benchmark models: fitted once, scored per coalition without refit
-    # (utils/xai_predictors.py; the nf path reproduces nf.predict bit for bit).
-    from utils.xai_predictors import (lightgbm_predictor, neuralforecast_predictor,
-                                      tft_predictor)
+    # Trainable baseline: fitted once, scored per coalition without refit
+    # (utils/xai_predictors.py).
+    from utils.xai_predictors import lightgbm_predictor
 
     log = logging.getLogger("timeshap")
     if model == "LightGBM":
         return lightgbm_predictor(frame, roles, horizon, gpu, params, log=log), True
-    if model == "TFT":
-        import mxnet as mx
-
-        from utils.device import uses_gpu
-        ctx = mx.gpu(gpu) if uses_gpu(gpu) else mx.cpu()
-        return tft_predictor(frame, roles, horizon, freq, epochs, ctx, params, level, log=log), True
-    if model in ("TCN", "DeepNPTS", "TimeXer"):
-        import neuralforecast.models as nf_models
-
-        if model == "TimeXer":
-            from models.models_neuralforecast import TimeXerHist
-            model_class = TimeXerHist
-        else:
-            model_class = getattr(nf_models, model)
-        return neuralforecast_predictor(model_class, frame, roles, horizon, freq, epochs,
-                                        gpu, params, log=log), True
     raise ValueError(f"no predictor for {model!r}")
 
 def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
@@ -330,14 +312,18 @@ def main(argv=None) -> int:
     parser.add_argument("--params-dir", type=Path,
                         default=Path(__file__).resolve().parents[1] / "results" / "tuning")
     parser.add_argument("--allow-refit", action="store_true",
-                        help="Explain DeepNPTS/PatchTST/TCN by refitting per coalition "
+                        help="Accepted for older command lines; every model that is left "
                              "(covariate players only; expensive but clean).")
     parser.add_argument("--out", type=Path, default=None)
-    parser.add_argument("--covariate-only", action="store_true",
-                        help="Game over the covariate blocks only, with the target history held fixed "
-                             "(32 coalitions instead of 512 at 5 blocks).  The default for the "
-                             "13-series sweep in plan/scripts.md: a measured forward here costs "
-                             "4-24 s, so the full 4+G game is hours per cell.")
+    parser.add_argument("--players", choices=("auto", "covariates", "temporal"), default="auto",
+                        help="Player set, identical for every model in the run.  "
+                             "'covariates' = one player per covariate variable (5 -> 32 coalitions); "
+                             "'temporal' = those plus hist_d1..hist_d4 (9 -> 512); "
+                             "'auto' (default) picks 'covariates' when the model list contains one "
+                             "with no target-history channel (LightGBM), because its temporal phi is "
+                             "exactly 0 there.")
+    parser.add_argument("--covariate-only", dest="players", action="store_const", const="covariates",
+                        help="Old name for --players covariates.")
     parser.add_argument("--per-covariate", "--per-variable", dest="per_variable",
                         action="store_true",
                         help="One player per covariate variable, on top of hist_d1..hist_d4 "
@@ -362,18 +348,41 @@ def main(argv=None) -> int:
                                "(< 4 %% horizon-MAE effect, and temperature hurts more often "
                                "than it helps).  Pass every column to reproduce the older "
                                "12-player game.")
+    parser.add_argument("--all-covariates", action="store_true",
+                        help="Take every covariate the COV frame carries instead of --covariates.  "
+                             "This is the benchmark's own input set (calendar + weather + price + "
+                             "state), and with block players it still fits: 12-14 columns form "
+                             "5-7 blocks, i.e. 32-128 coalitions.")
     parser.add_argument("--max-players", type=int, default=12,
                         help="Refuse a game larger than this many players (2^N coalitions).")
     parser.add_argument("--dry-run", action="store_true", help="Print the player set and exit.")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    # One player set for the whole run.  'temporal' is allowed even for a model without a
+    # history channel: its four hist_d players then score exactly 0, which is reported
+    # rather than hidden, so the player list stays comparable across models.
+    covariate_only = args.players == "covariates"
+    no_history = [model for model in args.models if model in NO_HISTORY_CHANNEL]
+    if args.players == "auto":
+        covariate_only = bool(no_history)
+        if no_history:
+            logging.getLogger("timeshap").warning(
+                "%s has no target-history channel, so a temporal player scores exactly 0 there; "
+                "using --players covariates for every model in this run (%d variables). "
+                "Pass --players temporal to keep the 9-player game anyway.",
+                ", ".join(no_history), len(args.covariates))
+    elif no_history and not covariate_only:
+        logging.getLogger("timeshap").warning(
+            "%s has no target-history channel: its hist_d players will be exactly 0 in this "
+            "9-player game (the player set still matches the other models)",
+            ", ".join(no_history))
     horizon = horizon_for(args.sampling)
     per_day = steps_per_day(args.sampling, args.dataset)
     frame = load_long_frame(args.dataset, args.series, args.level, args.sampling)
     prefix = series_prefix(args.series)
     task = {"pv_house": "solar", "bess_house": "battery"}.get(prefix, "load")
-    for column in [c for c in args.covariates if c not in frame.columns]:
+    for column in ([] if args.all_covariates else [c for c in args.covariates if c not in frame.columns]):
         frame = attach_block(frame, args.dataset, series_entity(args.series), task, column)
         logging.getLogger("timeshap").info(
             "attached %r to %s/%s - the loader scopes it to another task, so this game explains a "
@@ -381,7 +390,7 @@ def main(argv=None) -> int:
             column, args.dataset, args.series)
 
     cycles: dict = {}
-    requested = list(args.covariates)
+    requested = [] if args.all_covariates else list(args.covariates)
     if args.cyclic:
         frame, cycles = cyclic_calendar(frame, steps_per_day=per_day)
         requested = expand_cyclic_names(requested, cycles)
@@ -398,11 +407,12 @@ def main(argv=None) -> int:
         scaled, roles = restrict_columns(scaled, roles, requested)
     freq = f"{int(15 * (100 / args.sampling))}min"
 
+    used = requested or [c for c in frame.columns if c not in ("unique_id", "ds", "y")]
     logging.getLogger("timeshap").info(
-        "covariates (%d): %s", len(requested), ", ".join(requested))
+        "covariates (%d): %s", len(used), ", ".join(used))
 
     players, dropped = build_players(scaled, roles, horizon, per_day,
-                                     include_temporal=not args.covariate_only,
+                                     include_temporal=not covariate_only,
                                      per_variable=args.per_variable, cycles=cycles)
     logging.getLogger("timeshap").info(
         "%s/%s: %d points, horizon %d, %d players -> %d coalitions",
@@ -422,12 +432,25 @@ def main(argv=None) -> int:
                            f"{args.series}_{args.level}_{tag}")
     shares_rows, notes = {}, {}
     for model in args.models:
+        # The tuned file is named after the *tuning* series, not the reported dataset
+        # (london borrows zonnedael9, belgium borrows belgium_pv1), so ask
+        # utils.tuning for the resolution the benchmark cells used; the old
+        # {model}_{dataset}_... name stays as a fallback for hand-written files.
         params_path = args.params_dir / f"{model}_{args.dataset}_{args.level}_{sampling_tag(args.sampling)}.json"
+        try:
+            from utils.tuning import tuned_resolution
+            resolved, _tuned_at = tuned_resolution(Path(args.params_dir).parent, model,
+                                                   args.dataset, args.level, args.sampling)
+        except (KeyError, ImportError):
+            resolved = params_path
+        if resolved.exists():
+            params_path = resolved
         params = {}
         if params_path.exists():
             payload = json.loads(params_path.read_text(encoding="utf-8"))
             params = dict(payload.get("best_params", payload))
-        include_temporal = model != "LightGBM" and not args.covariate_only   # a direct regressor has no lag
+            logging.getLogger("timeshap").info("%s: tuned parameters from %s", model, params_path.name)
+        include_temporal = not covariate_only   # one player set for every model in the run
         if model not in CLEAN_GAME_MODELS and not args.allow_refit:
             notes[model] = ("skipped: NeuralForecast freezes the context and hist_exog into the "
                             "fitted dataset, so a clean coalition game needs --allow-refit")

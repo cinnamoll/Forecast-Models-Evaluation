@@ -11,7 +11,7 @@ costs only the run that was in flight.
 Usage
 -----
     python scripts/run_benchmark.py --dry-run
-    python scripts/run_benchmark.py --models LightGBM TCN --datasets london
+    python scripts/run_benchmark.py --models LightGBM Chronos2 --datasets london
     python scripts/run_benchmark.py --level L0 --force
 """
 
@@ -29,16 +29,15 @@ if str(PROJECT_ROOT) not in sys.path:
 from utils.protocol import DATASET_WINDOWS, runs_for, sampling_tag
 from utils.tuning import tuned_resolution
 
-#: Every model a cell may run: the five trainable ones of the transfer flow
-#: (LightGBM, DeepNPTS, TCN, TFT, TimeXer) and the three zero-shot checkpoints.
-MODEL_ORDER = ("LightGBM", "DeepNPTS", "TCN", "TFT", "TimeXer",
-               "Chronos2", "Timestral", "TimesFM3")
+#: Every model a cell may run: the tuned LightGBM baseline and the three zero-shot
+#: checkpoints it is compared against.
+MODEL_ORDER = ("LightGBM", "Chronos2", "Timestral", "TimesFM3")
 
 #: Models whose refit accepts ``--params_json``; the zero-shot ones take none.
 #: Their parameters come from ``scripts/tune_optuna.py`` and are looked up through
 #: ``utils/tuning.py``: London runs on Zonnedael's search, Belgium's eight series
 #: on PV house 1's.
-TUNED_MODELS = ("LightGBM", "DeepNPTS", "TCN", "TFT", "TimeXer")
+TUNED_MODELS = ("LightGBM",)
 
 def cell_dir(dataset: str, model: str, sampling: float, level: str, results_dir) -> Path:
     base = PROJECT_ROOT / results_dir / f"results_{dataset}" / model / f"Sampling_{sampling_tag(sampling)}"
@@ -62,14 +61,6 @@ def command_for(dataset: str, model: str, sampling: float, level: str, results_d
     specs = {
         "LightGBM": {"env": "statsml", "script": "models/models_statsml.py",
                      "flags": ["--models", "LightGBM"]},
-        "DeepNPTS": {"env": "neuralforecast", "script": "models/models_neuralforecast.py",
-                     "flags": ["--models", "DeepNPTS", "--epochs", "100"]},
-        "TCN": {"env": "neuralforecast", "script": "models/models_neuralforecast.py",
-                "flags": ["--models", "TCN", "--epochs", "100"]},
-        "TFT": {"env": "gluonts", "script": "models/models_gluonts.py",
-                "flags": ["--models", "TemporalFusionTransformer", "--epochs", "100"]},
-        "TimeXer": {"env": "neuralforecast", "script": "models/model_timexer.py",
-                    "flags": ["--epochs", "100"]},
         "Chronos2": {"env": "chronos", "script": "models/fmodel_chronos2.py", "flags": []},
         "Timestral": {"env": "chronos", "script": "models/fmodel_timestral.py", "flags": []},
         "TimesFM3": {"env": "timesfm3", "script": "models/fmodel_timesfm3.py", "flags":[]}

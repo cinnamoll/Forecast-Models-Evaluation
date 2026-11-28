@@ -360,7 +360,6 @@ if __name__ == "__main__":
         "NaiveDrift": "Naive Drift",
         "NaiveMovingAverage": "Naive MA",
         "MQCNN": "MQ-CNN",
-        "TemporalFusionTransformer": "TFT",
         "MQRNN": "MQ-RNN",
         "VanillaTransformer": "Vanilla Trans.",
         "TimerXL": "Timer-XL",

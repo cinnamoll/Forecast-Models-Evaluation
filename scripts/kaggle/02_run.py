@@ -2,15 +2,15 @@
 """Run scripts/run_benchmark.py on a hosted GPU.
 
 The runner builds each command without ``--gpu``, and ``utils/device.py`` reads
-anything except 0/1 as "CPU", so a notebook run would train all four models on
-CPU while the notebook looks healthy.  This wrapper imports the runner, appends
+anything except 0/1 as "CPU", so a notebook run would train every cell on CPU
+while the notebook looks healthy.  This wrapper imports the runner, appends
 the accelerator flag to every command it builds, guards the conda envs it will
 shell out to, and forwards the rest of the arguments untouched.
 
-    python scripts/kaggle/02_run.py --dry-run --models TimeXer TFT TCN DeepNPTS \
+    python scripts/kaggle/02_run.py --dry-run --models LightGBM \
         --datasets germany --samplings 25 --level COV --results-dir /kaggle/working/results
 
-    python scripts/kaggle/02_run.py --models TimeXer TFT TCN DeepNPTS --level COV
+    python scripts/kaggle/02_run.py --models "LightGBM Chronos2 Timestral TimesFM3" --level COV
 """
 from __future__ import annotations
 
@@ -33,9 +33,8 @@ import run_benchmark as runner  # noqa: E402
 
 #: model -> conda env the runner will call, so a missing env fails here instead of
 #: after the first import inside a subprocess.
-MODEL_ENV = {"TimeXer": "neuralforecast", "TCN": "neuralforecast",
-             "DeepNPTS": "neuralforecast", "TFT": "gluonts", "LightGBM": "statsml",
-             "Chronos2": "chronos", "Timestral": "chronos", "TimesFM3": "timesfm3"}
+MODEL_ENV = {"LightGBM": "statsml", "Chronos2": "chronos",
+             "Timestral": "chronos", "TimesFM3": "timesfm3"}
 
 
 def conda_envs() -> set[str]:
@@ -51,7 +50,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Hosted-GPU wrapper around the COV benchmark runner.")
     parser.add_argument("--gpu", type=int, default=int(os.environ.get("KAGGLE_GPU", "0")),
                         help="Accelerator index handed to every model script (default 0).")
-    parser.add_argument("--models", nargs="+", default=["TimeXer", "TFT", "TCN", "DeepNPTS"])
+    parser.add_argument("--models", nargs="+", default=["LightGBM"])
     parser.add_argument("--datasets", nargs="+", default=None,
                         help="Omit for the runner's default: all four datasets.")
     parser.add_argument("--samplings", nargs="+", type=float, default=None,

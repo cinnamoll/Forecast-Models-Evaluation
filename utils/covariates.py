@@ -489,6 +489,57 @@ def shift_past_only(frame: pd.DataFrame, roles: dict, points: int) -> pd.DataFra
     return shifted
 
 
+def points_per_day(index) -> int:
+    """Points in one wall-clock day of an already subsampled grid."""
+    steps = pd.Series(pd.DatetimeIndex(index)).diff().dropna()
+    if steps.empty:
+        return 1
+    return max(1, int(round(86400.0 / float(steps.dt.total_seconds().median()))))
+
+
+def target_features(y: pd.Series, horizon: int, per_day: int) -> pd.DataFrame:
+    """Lag and rolling features of the target, all known at the forecast origin.
+
+    A direct multi-step regressor reads the covariates of the row it predicts, so
+    the row for ``t`` stands at origin ``t - horizon`` (that is what
+    ``shift_past_only`` enforces for the measured covariates).  Every column here
+    is therefore built with a lag of **at least** ``horizon`` points:
+    ``y_lag_k`` carries ``y[t-k]`` and the rolling windows end at ``t - horizon``.
+    A lag shorter than the horizon would read the future and is filtered out.
+
+    These columns exist because a sequence model gets the same information for
+    free from its context window; a tabular model has to be handed it.  Nothing
+    here is an exogenous covariate — the names start with ``y_`` so the player
+    set of an explanation can never mistake them for one.
+
+    The first ``max lag`` rows stay NaN rather than being back-filled: the series
+    has no history there, and a filled value would be a future observation of the
+    lag itself.  LightGBM routes NaN rows through the default branch.
+    """
+    lags = sorted({lag for lag in (horizon, 2 * horizon, per_day, 2 * per_day, 7 * per_day)
+                   if lag >= horizon})
+    columns = {}
+    for lag in lags:
+        columns[f"y_lag_{lag}"] = y.shift(lag)
+    shifted = y.shift(horizon)
+    for width in sorted({per_day, 7 * per_day}):
+        window = shifted.rolling(width, min_periods=max(2, width // 4))
+        columns[f"y_mean_{width}"] = window.mean()
+        columns[f"y_std_{width}"] = window.std()
+    week = 7 * per_day
+    columns[f"y_delta_{week}"] = shifted - y.shift(week + horizon)
+    return pd.DataFrame(columns, index=y.index)
+
+
+def attach_target_features(frame: pd.DataFrame, y: pd.Series, horizon: int,
+                           per_day: int | None = None) -> pd.DataFrame:
+    """``frame`` plus :func:`target_features`, row-aligned."""
+    per_day = per_day or points_per_day(y.index)
+    block = target_features(y.reset_index(drop=True), horizon, per_day)
+    base = frame.reset_index(drop=True)
+    return pd.concat([base, block.reset_index(drop=True)], axis=1)
+
+
 def column_groups(columns) -> dict:
     """``column -> block name`` for the TimeSHAP player set.
 

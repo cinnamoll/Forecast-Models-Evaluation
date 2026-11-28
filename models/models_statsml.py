@@ -16,7 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from utils.metrics import split_train_test, calculate_metrics, forecast_plot_and_csv, plot_model_metrics
 from utils.dataset_config import DatasetBelgium1D, DatasetGermany1D, DatasetLondon1D, DatasetZonnedael1D
-from utils.covariates import roles_for, shift_past_only
+from utils.covariates import attach_target_features, roles_for, shift_past_only
 from utils.device import GPU_HELP, uses_gpu
 from utils.protocol import horizon_for, run_dir
 
@@ -114,6 +114,17 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
                 "lagged %d past-only covariate(s) by %d steps: %s",
                 len(roles["past_only"]), forecast_horizon, ", ".join(roles["past_only"]),
             )
+        if model_type == "LightGBM":
+            # The target's own history.  A sequence model reads it from its context
+            # window; a direct regressor has to be handed it as columns, and every
+            # column is shifted by at least one horizon so the row for t still only
+            # carries what was known at the origin.
+            X = attach_target_features(X, y, forecast_horizon)
+            logging.info(
+                "target-history features: %d column(s) (lags >= %d steps): %s",
+                len(X.columns), forecast_horizon,
+                ", ".join(c for c in X.columns if c.startswith("y_")),
+            )
         X_train, X_test, y_train, y_test = split_train_test(X, y, test_size=forecast_horizon)
         logging.info(f"Training {model_type} model for {model_name} on {X_train.shape[0]} samples ({sampling_rate}% of original data)...")
         params = {
@@ -130,12 +141,21 @@ def generic_model(X, y, model_name, save_dir, model_type, run_num, sampling_rate
                 params.update(device_type="gpu", gpu_device_id=gpu)
             else:
                 params["device_type"] = "cpu"
+            # The tables report MAE, so train the loss that matches it.  The paper's
+            # refit left LightGBM on its default L2; L1 is better aligned with the
+            # reported metric and less sensitive to the spikes of a load/PV series.
+            # A tuned JSON may still override either key.
+            params.setdefault("objective", "regression_l1")
+            params.setdefault("metric", "mae")
             if params_override:
                 applied = {k: v for k, v in params_override.items()
                            if k not in {"random_state", "n_jobs", "verbosity", "device_type"}}
                 if applied:
                     logging.info("LightGBM tuned parameters: %s", applied)
                     params.update(applied)
+            logging.info("LightGBM objective=%s metric=%s (n_estimators=%s, learning_rate=%s)",
+                         params.get("objective"), params.get("metric"),
+                         params.get("n_estimators", 100), params.get("learning_rate", 0.1))
             model = lgb.LGBMRegressor(**params).fit(X_train, y_train)
             preds = model.predict(X_test)
         elif model_type == "KNNRegression":

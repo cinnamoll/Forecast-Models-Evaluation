@@ -9,10 +9,11 @@
 # (utils/xai_predictors.py re-scores a fitted model per coalition, no refit).
 # Keep MODELS to one conda env per invocation if a cell must be reproducible alone.
 #
-# Cost: the game is enumerated exactly, so one run is 2^players model calls.  With
-# --per-variable and the five covariate players that is 2^5 = 32 per model, which is
-# what makes the five-model comparison cheap; adding temporal players multiplies it
-# by 2^4.  Pass XAI_DRY_CHECK=1 first to print the real count.
+# Players are one per COVARIATE BLOCK by default (BLOCKS=1): the benchmark's own
+# covariate set (calendar + weather + price + state) forms 5-7 blocks, so the exact
+# game is 2^5..2^7 = 32..128 calls per (dataset, series, model).  PER_VARIABLE=1
+# switches to one player per column, which is 2^12..2^14 and hours per cell.
+# XAI_DRY_CHECK=1 prints the real counts without running anything.
 set -euo pipefail
 
 # Colab exports MPLBACKEND=module://matplotlib_inline.backend_inline and the conda envs
@@ -25,10 +26,18 @@ REPO_DIR="${REPO_DIR:-/kaggle/working/Forecast-Models-Evaluation}"
 RESULTS="${RESULTS:-/kaggle/working/results}"
 XAI_OUT="${XAI_OUT:-$RESULTS/xai_timeshap}"
 LEVEL="${LEVEL:-COV}"
-SAMPLING="${SAMPLING:-100}"
+SAMPLING="${SAMPLING:-25}"
 MODE="${MODE:-background}"
+BLOCKS="${BLOCKS:-1}"
+if [ "$BLOCKS" = "1" ]; then
+  # Block players over the full COV set: the same covariates the benchmark cells run.
+  ALL_COVARIATES="${ALL_COVARIATES:-1}"
+  PER_VARIABLE="${PER_VARIABLE:-0}"
+else
+  ALL_COVARIATES="${ALL_COVARIATES:-0}"
+  PER_VARIABLE="${PER_VARIABLE:-1}"
+fi
 COVARIATES="${COVARIATES:-hour dayofweek humidity temperature cloud_cover}"
-PER_VARIABLE="${PER_VARIABLE:-1}"
 COVARIATE_ONLY="${COVARIATE_ONLY:-1}"
 MAX_PLAYERS="${MAX_PLAYERS:-12}"
 EPOCHS="${EPOCHS:-100}"
@@ -37,8 +46,8 @@ DRY="${DRY:-0}"
 XAI_DRY_CHECK="${XAI_DRY_CHECK:-0}"
 PYTHON="${PYTHON:-python}"
 
-MODELS="${MODELS:-LightGBM TCN DeepNPTS TimeXer TFT}"
-DATASETS="${DATASETS:-germany london}"
+MODELS="${MODELS:-LightGBM Chronos2 Timestral TimesFM3}"
+DATASETS="${DATASETS:-germany london zonnedael belgium}"
 LOG_DIR="$XAI_OUT/logs"
 mkdir -p "$LOG_DIR"
 
@@ -47,8 +56,7 @@ env_for() {  # model -> conda env, matching the docstring examples of xai_timesh
     Chronos2|Timestral) echo chronos ;;
     TimesFM3) echo timesfm3 ;;
     LightGBM) echo statsml ;;
-    TFT) echo gluonts ;;
-    *) echo neuralforecast ;;
+    *) echo "unknown model $1 (explainable: LightGBM, Chronos2, Timestral, TimesFM3)" >&2; return 2 ;;
   esac
 }
 
@@ -90,7 +98,8 @@ for dataset in $DATASETS; do
       command=(conda run --no-capture-output -n "$(env_for "$model")" python scripts/xai_timeshap.py
                --dataset "$dataset" --series "$series" --models "$model" --level "$LEVEL"
                --sampling "$SAMPLING" --mode "$MODE" --epochs "$EPOCHS" --gpu "$GPU"
-               --covariates $COVARIATES --max-players "$MAX_PLAYERS" --out "$out")
+               --max-players "$MAX_PLAYERS" --out "$out")
+      [ "$ALL_COVARIATES" = "1" ] && command+=(--all-covariates) || command+=(--covariates $COVARIATES)
       [ "$PER_VARIABLE" = "1" ] && command+=(--per-variable)
       [ "$COVARIATE_ONLY" = "1" ] && command+=(--covariate-only)
       [ "$XAI_DRY_CHECK" = "1" ] && command+=(--dry-run)

@@ -14,7 +14,7 @@ set -euo pipefail
 REPO_DIR="${REPO_DIR:-/kaggle/working/Forecast-Models-Evaluation}"
 RESULTS="${RESULTS:-/kaggle/working/results}"
 ENV_FILE="${ENV_FILE:-/kaggle/working/env.sh}"
-ENVS="${ENVS:-neuralforecast gluonts}"
+ENVS="${ENVS:-statsml chronos timesfm3}"
 INSTALL="${INSTALL:-1}"
 PYTHON="${PYTHON:-python}"
 # Ephemeral by default: a conda tree in /kaggle/working is 5-8 GB against the 20 GB
@@ -87,7 +87,7 @@ cd "$REPO_DIR"
 if command -v conda >/dev/null 2>&1; then
   echo "== dry run: the commands the sweep would execute"
   "$PYTHON" scripts/kaggle/02_run.py --dry-run \
-    --models TimeXer TFT TCN DeepNPTS --level COV --results-dir "$RESULTS" \
+    --models LightGBM --level COV --results-dir "$RESULTS" \
     --datasets "${DRY_DATASETS:-germany}" --samplings "${DRY_SAMPLINGS:-25}"
 else
   echo "== conda absent: skipping the dry run"

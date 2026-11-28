@@ -18,14 +18,15 @@ script itself was hiding a result.  The contract:
   reported cells that borrow those parameters, so a parameter resting on the edge
   of its space is reported instead of being silently transferred.
 
-Each model family is imported lazily, so the script runs in the environment that
-holds the model (``statsml`` for LightGBM, ``neuralforecast`` for DeepNPTS / TCN,
-``gluonts`` for TFT), the same way ``models/`` does.
+Only the LightGBM baseline is tuned: the three zero-shot checkpoints stay
+zero-shot, and the deep baselines they are compared against are no longer part of
+this study.  LightGBM needs no GPU, so the script runs in the environment that
+holds it (``statsml``).
 
 Example
 -------
-    conda run -n neuralforecast python scripts/tune_optuna.py \
-        --model TCN --dataset germany --level COV --sampling 100
+    conda run -n statsml python scripts/tune_optuna.py \
+        --model LightGBM --dataset germany --level COV --sampling 25 --trials 30
 """
 
 from __future__ import annotations
@@ -44,7 +45,8 @@ import pandas as pd
 if str(Path(__file__).resolve().parents[1]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from utils.covariates import calendar_frame, roles_for, scale_covariates, shift_past_only
+from utils.covariates import (attach_target_features, calendar_frame, roles_for,
+                            scale_covariates, shift_past_only)
 from utils.protocol import (freq_for, horizon_for, sampling_tag, step_minutes,
                             steps_per_day, validation_windows)
 from utils.tuning import SPACE_VERSION, TUNE_SETS, transfer_targets
@@ -89,129 +91,40 @@ L0_CALENDAR = {
 # ----------------------------------------------------------------------- spaces
 
 def suggest_lightgbm(trial) -> dict:
-    """LightGBM, on the paper's loss.
+    """LightGBM, now on the loss the tables report.
 
-    ``objective`` is not searched.  The paper's refit passes no objective, so the
-    reported table was trained with LightGBM's default L2; a search that
-    minimised L1 would hand the refit a model it never trained.  ``lambda_l1``
-    and ``lambda_l2`` are gone as well: with a min-max target every leaf output
-    is bounded by 1 and LightGBM soft-thresholds leaf outputs with ``lambda_l1``,
-    so any value at or above 1 collapses the tree to a constant -- the dimension
-    was a switch between "normal" and "predict the mean", not a regularisation
-    knob, and most of ``[0, 10]`` was a dead zone TPE had to walk out of.
+    ``objective`` *is* searched: the paper's refit left it on the default L2, but
+    every table in this repo scores MAE, so L1 is a legitimate candidate and the
+    search decides with the same metric the paper uses.  ``lambda_l1``/``lambda_l2``
+    stay out: with a min-max target every leaf output is bounded by 1 and LightGBM
+    soft-thresholds leaf outputs with ``lambda_l1``, so any value at or above 1
+    collapses the tree to a constant -- the dimension was a switch between
+    "normal" and "predict the mean", not a regularisation knob.
     """
     return {
-        "num_leaves": trial.suggest_int("num_leaves", 5, 50),
-        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1, log=True),
-        "n_estimators": trial.suggest_int("n_estimators", 100, 2000, step=100),
-        "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 20, 200),
-        "feature_fraction": trial.suggest_float("feature_fraction", 0.6, 1.0),
-        "bagging_fraction": trial.suggest_float("bagging_fraction", 0.6, 1.0),
-    }
-
-
-def suggest_deepnpts(trial) -> dict:
-    return {
-        "hidden_size": trial.suggest_categorical("hidden_size", [32, 64, 128, 256]),
-        "n_layers": trial.suggest_int("n_layers", 1, 3),
-        "dropout": trial.suggest_float("dropout", 0.0, 0.5),
-        "learning_rate": trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True),
-        "batch_size": trial.suggest_categorical("batch_size", [32, 64, 128, 256]),
-    }
-
-
-def suggest_tcn(trial) -> dict:
-    """TCN: the depth of the dilation stack *is* the receptive field.
-
-    ``dilations_depth`` is searched instead of a list, because a TPE sampler
-    cannot move through a list of ints, and because the depth decides whether the
-    network can see the horizon at all: with ``kernel_size=2`` the context is
-    ``1 + sum(2^i)`` steps, i.e. 32 / 64 / 128 / 256 for depth 5..8, so at
-    horizon 192 the deepest level of the plan's original space (7) still falls
-    short.  Level 8 is included for exactly that reason, and a parameter that
-    ends on the deepest level is reported as "widen the space" rather than as a
-    verdict on the architecture (plan sections 1.1 and 5).
-
-    ``scaler_type`` is not searched: the plan keeps each model's default so the
-    columns stay comparable with the published table.
-    """
-    return {
-        "kernel_size": trial.suggest_categorical("kernel_size", [2, 3]),
-        "dilations_depth": trial.suggest_categorical("dilations_depth", [5, 6, 7, 8]),
-        "encoder_hidden_size": trial.suggest_int("encoder_hidden_size", 64, 256, step=64),
-        "context_size": trial.suggest_int("context_size", 5, 20),
-        "decoder_layers": trial.suggest_int("decoder_layers", 1, 3),
-        "learning_rate": trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True),
-        "batch_size": trial.suggest_categorical("batch_size", [32, 64, 128]),
-    }
-
-
-def suggest_tft(trial) -> dict:
-    """GluonTS MX ``TemporalFusionTransformerEstimator`` names.
-
-    ``context_length`` is deliberately absent: it stays ``prediction_length``,
-    which is what keeps the horizon definition of the paper.  ``learning_rate``
-    belongs to the ``Trainer`` and is split out by ``models/models_gluonts.py``.
-    ``num_batches_per_epoch`` is fixed, not searched: it only scales the training
-    budget, so searching it made "steps" a hyperparameter and entangled
-    ``learning_rate`` with the budget the trial happened to draw.
-    """
-    return {
-        "hidden_dim": trial.suggest_int("hidden_dim", 16, 64, step=8),
-        "num_heads": trial.suggest_categorical("num_heads", [2, 4, 8]),
-        "dropout_rate": trial.suggest_float("dropout_rate", 0.0, 0.3),
-        "learning_rate": trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True),
-        "batch_size": trial.suggest_categorical("batch_size", [32, 64, 128]),
-    }
-
-
-def suggest_timexer(trial) -> dict:
-    """TimeXer: the patch geometry and the encoder size, not the protocol.
-
-    ``patch_len`` is searched because it decides how many temporal tokens the
-    encoder sees for a fixed window: ``patch_num = input_size // patch_len``, i.e.
-    32/24/16/12 tokens for a 384-point window at the four values below.  Every
-    value divides ``input_size`` there, so no trial silently pads.  ``n_heads``
-    comes from a set that divides every ``hidden_size`` candidate (4 and 8 all
-    divide 128/256/512), because an indivisible pair raises inside the attention
-    layer instead of scoring badly.
-
-    Not searched, on purpose: ``n_series`` (the model is fitted one series at a
-    time), ``use_norm`` and ``factor`` (architecture switches that the published
-    cells keep at their defaults, so a tuned file stays a hyper-parameter set),
-    and ``h``/``input_size``/``max_steps`` (protocol: the window and the budget
-    are not hyper-parameters).
-    """
-    return {
-        "hidden_size": trial.suggest_categorical("hidden_size", [32, 64, 128, 256]),
-        "input_size": trial.suggest_categorical("input_size", [48, 64, 96, 192]),
-        "n_heads": trial.suggest_categorical("n_heads", [2, 4, 8]),
-        "e_layers": trial.suggest_int("e_layers", 1, 2),
-        "d_ff": trial.suggest_int("d_ff", 128, 1024, step=128),
-        "patch_len": trial.suggest_categorical("patch_len", [12, 16, 24, 48]),
-        "dropout": trial.suggest_float("dropout", 0.1, 0.5),
-        "learning_rate": trial.suggest_float("learning_rate", 1e-4, 3e-3, log=True),
-        "batch_size": trial.suggest_categorical("batch_size", [32, 64, 128]),
+        "objective": trial.suggest_categorical("objective", ["regression_l1", "regression"]),
+        "num_leaves": trial.suggest_int("num_leaves", 7, 127, log=True),
+        "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.1, log=True),
+        "n_estimators": trial.suggest_int("n_estimators", 100, 3000, step=100),
+        "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 10, 300, log=True),
+        "feature_fraction": trial.suggest_float("feature_fraction", 0.5, 1.0),
+        "bagging_fraction": trial.suggest_float("bagging_fraction", 0.5, 1.0),
     }
 
 
 SUGGESTERS = {
     "LightGBM": suggest_lightgbm,
-    "DeepNPTS": suggest_deepnpts,
-    "TCN": suggest_tcn,
-    "TFT": suggest_tft,
-    "TimeXer": suggest_timexer,
 }
 
 #: Values every trial gets, whatever it sampled.  They are not suggestions, so
 #: Optuna never stores them in ``best_params``; writing them into the JSON keeps
 #: the file able to reproduce the tuned model on its own.
 FIXED_PARAMS = {
-    # ``regression`` is LightGBM's L2, the paper's choice; ``bagging_freq`` has to
+    # ``metric`` only steers LightGBM's own logging/early stopping, never the fit;
+    # the objective is now searched (``suggest_lightgbm``).  ``bagging_freq`` has to
     # travel with ``bagging_fraction`` or a consumer that builds the estimator
     # from this file alone silently disables bagging.
-    "LightGBM": {"objective": "regression", "bagging_freq": 1},
-    "TFT": {"num_batches_per_epoch": 1},
+    "LightGBM": {"metric": "mae", "bagging_freq": 1},
 }
 
 
@@ -219,10 +132,6 @@ def expand_params(model: str, params: dict) -> dict:
     """Sampled names -> the names the model accepts, plus the fixed values."""
     expanded = dict(params)
     expanded.update(FIXED_PARAMS.get(model, {}))
-    if model == "TCN" and "dilations_depth" in expanded:
-        raw = expanded.pop("dilations_depth")
-        depth = raw if isinstance(raw, int) else int(float(str(raw)))
-        expanded["dilations"] = [2 ** level for level in range(depth)]
     return expanded
 
 
@@ -230,10 +139,9 @@ def boundary_hits(study, rel_tol: float = 0.05) -> list:
     """Parameters whose best value sits on the edge of its own distribution.
 
     Read from ``study.best_trial.distributions`` rather than from a hand-copied
-    table of the space: the previous duplicate had already drifted (DeepNPTS
-    ``batch_size`` was searched over 32/64/128/256 but checked against
-    32/64/128, so 256 was never reported, and TCN's ``batch_size`` was not
-    checked at all).  Categorical spaces with two choices are skipped -- every
+    table of the space: the previous duplicate had already drifted (a categorical
+    searched over four values but checked against three, so the fourth was never
+    reported as an edge hit).  Categorical spaces with two choices are skipped -- every
     draw is an edge there -- and numeric spaces use a relative tolerance of
     ``rel_tol`` of the range, in log space when the distribution is log-scaled.
     """
@@ -350,118 +258,6 @@ def lightgbm_objective(params, X, y, windows, seed, trial=None):
     return float(np.mean(maes))
 
 
-def neuralforecast_objective(model_class, params, frame, windows, steps, freq, seed, gpu,
-                             trial=None):
-    """Mean MAE over the ``DL_WINDOWS`` windows closest to the test block.
-
-    The previous version scored ``windows[0]`` only: the window furthest from the
-    test block, trained on the fewest rows, from a single seed.  With seven
-    windows available that is a 13 % input-size difference on WPuQ, and it made
-    the neural cells incomparable with LightGBM, which averaged all of them.
-    """
-    from neuralforecast import NeuralForecast
-    from utils.device import lightning_device_config
-
-    selected = windows[-DL_WINDOWS:]
-    maes = []
-    for step, (train_end, eval_end) in enumerate(selected):
-        window_frame, roles = _prepare_window(frame, train_end, eval_end)
-        horizon = eval_end - train_end
-        kwargs = dict(h=horizon, input_size=horizon * 2, max_steps=int(steps),
-                      random_seed=seed, **lightning_device_config(gpu), **params)
-        if getattr(model_class, "MULTIVARIATE", False):
-            # nf's multivariate classes need the stack width; the tuner fits one series.
-            kwargs.setdefault("n_series", 1)
-        exog = {}
-        # Same rule as models/models_neuralforecast.py: a channel the class does not
-        # declare is not passed, otherwise nf raises instead of letting the trial score.
-        if roles["past_only"] and getattr(model_class, "EXOGENOUS_HIST", True):
-            exog["hist_exog_list"] = roles["past_only"]
-        if roles["known_future"] and getattr(model_class, "EXOGENOUS_FUTR", True):
-            exog["futr_exog_list"] = roles["known_future"]
-        if roles["static"] and getattr(model_class, "EXOGENOUS_STAT", True):
-            exog["stat_exog_list"] = roles["static"]
-        kwargs.update(exog)
-
-        train = window_frame.iloc[:train_end]
-        static_df = None
-        if exog.get("stat_exog_list"):
-            static_df = window_frame.groupby("unique_id")[exog["stat_exog_list"]].first().reset_index()
-        forecast = NeuralForecast(models=[model_class(**kwargs)], freq=freq)
-        # ``val_size`` is what turns ``max_steps`` into an early-stopped budget:
-        # the last horizon of the training block is held out, still before the
-        # test window.
-        forecast.fit(df=train, val_size=horizon, static_df=static_df)
-        if exog.get("futr_exog_list"):
-            futr_df = window_frame.iloc[train_end:eval_end][["unique_id", "ds", *exog["futr_exog_list"]]]
-            predicted = forecast.predict(futr_df=futr_df)
-        else:
-            predicted = forecast.predict()
-        truth = window_frame.iloc[train_end:eval_end]["y"].to_numpy(dtype=float)
-        values = predicted.iloc[-len(truth):][model_class.__name__].to_numpy(dtype=float)
-        mae = float(np.mean(np.abs(values - truth)))
-        maes.append(mae)
-        _report(trial, mae, step)
-    _remember(trial, maes, selected[-1][0])
-    return float(np.mean(maes))
-
-
-def gluonts_objective(model_class, params, frame, windows, steps, freq, seed, gpu, level,
-                      trial=None):
-    """Mean MAE over the ``DL_WINDOWS`` windows closest to the test block.
-
-    ``steps`` is a gradient-step budget: ``num_batches_per_epoch`` is fixed at 1,
-    so ``epochs`` and steps are the same number and the TFT trial sees the same
-    budget as a NeuralForecast trial.
-    """
-    from models.models_gluonts import covariate_spec, split_params, to_gluonts_dataset
-    from utils.device import uses_gpu
-    import mxnet as mx
-    from gluonts.evaluation.backtest import make_evaluation_predictions
-    from gluonts.mx.trainer import Trainer
-
-    selected = windows[-DL_WINDOWS:]
-    estimator_kwargs, trainer_kwargs, _ignored = split_params(model_class, params)
-    trainer_kwargs.setdefault("num_batches_per_epoch", 1)
-    epochs = max(1, int(steps) // int(trainer_kwargs["num_batches_per_epoch"]))
-    ctx = mx.gpu(gpu) if uses_gpu(gpu) else mx.cpu()
-
-    maes = []
-    for step, (train_end, eval_end) in enumerate(selected):
-        window_frame, roles = _prepare_window(frame, train_end, eval_end)
-        horizon = eval_end - train_end
-        # Each GluonTS entry needs covariate arrays of its *own* length: the
-        # training entry ends at the forecast origin, the prediction entry keeps
-        # the whole series (``models/models_gluonts.py::covariate_spec``).  One
-        # spec reused for both made the train arrays longer than its target.
-        train_frame = window_frame.iloc[:train_end]
-        train_entry_extra, covariate_kwargs = covariate_spec(
-            train_frame, roles, level, train_end=train_end)
-        test_entry_extra, _unused = covariate_spec(
-            window_frame, roles, level, train_end=train_end)
-        start = pd.Timestamp(window_frame["ds"].iloc[0])
-        train_ds = to_gluonts_dataset(train_frame, freq, start, train_entry_extra)
-        test_ds = to_gluonts_dataset(window_frame, freq, start, test_entry_extra)
-
-        mx.random.seed(seed)
-        np.random.seed(seed)
-        estimator = model_class(freq=freq, prediction_length=horizon,
-                                **covariate_kwargs, **estimator_kwargs,
-                                trainer=Trainer(epochs=epochs, ctx=ctx, **trainer_kwargs))
-        predictor = estimator.train(training_data=train_ds)
-        forecast_it, _ = make_evaluation_predictions(dataset=test_ds, predictor=predictor,
-                                                     num_samples=100)
-        prediction = np.asarray(list(forecast_it)[0].mean[:horizon], dtype=float)
-        truth = window_frame.iloc[train_end:eval_end]["y"].to_numpy(dtype=float)
-        mae = float(np.mean(np.abs(prediction - truth)))
-        maes.append(mae)
-        _report(trial, mae, step)
-    _remember(trial, maes, selected[-1][0])
-    return float(np.mean(maes))
-
-
-# ------------------------------------------------------------------------ study
-
 def build_study(storage: str, name: str, seed: int):
     import optuna
 
@@ -570,15 +366,15 @@ def time_limit_callback(max_hours: float):
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Optuna search for one model (plan section 5).")
-    parser.add_argument("--model", required=True, choices=list(SUGGESTERS))
+    parser.add_argument("--model", required=True, choices=list(SUGGESTERS),
+                        help="Tunable models left after the deep baselines were dropped.")
     parser.add_argument("--dataset", required=True, choices=sorted(DATASET_ALIASES),
                         help="Tuning series: germany (WPuQ), zonnedael9 (Klant 9), "
                              "belgium_pv1 (Belgium PV house 1).")
     parser.add_argument("--level", default="COV", choices=list(("L0", "COV")))
     parser.add_argument("--sampling", type=float, default=100.0)
     parser.add_argument("--max-steps", type=int, default=100,
-                        help="Gradient steps for DeepNPTS/TCN and epochs for TFT "
-                             "(num_batches_per_epoch is fixed at 1).")
+                        help="Unused by LightGBM; kept so older command lines still parse.")
     parser.add_argument("--trials", type=int, default=30)
     parser.add_argument("--hours", type=float, default=1.5,
                         help="Wall-clock limit of one session; resuming adds more.")
@@ -615,18 +411,6 @@ def main(argv=None) -> int:
         # implied 30.
         frame = frame.iloc[::stride].reset_index(drop=True)
     windows = validation_windows(len(frame), horizon, per_day, 14)
-    if args.model == "TimeXer":
-        # Tune on the same covariate table the reported cell will run on, otherwise
-        # the parameters are searched for a different input mapping.  static_* is not
-        # in that set, and the variant has no channel for it.
-        from models.model_timexer import BELGIUM_COVARIATES, DEFAULT_COVARIATES
-        wanted = BELGIUM_COVARIATES if dataset == "belgium_pv1" else DEFAULT_COVARIATES
-        labels = [c for c in ("unique_id", "ds", "y") if c in frame.columns]
-        keep = labels + [c for c in wanted if c in frame.columns]
-        dropped = [c for c in frame.columns if c not in keep]
-        frame = frame[keep]
-        log.info("TimeXer: covariate set %s (dropped: %s)",
-                 [c for c in keep if c not in labels], dropped)
     log.info("%s/%s: %d points, %s, horizon %d, %d validation window(s) of %d steps",
              args.model, dataset, len(frame), freq, horizon, len(windows), horizon)
 
@@ -641,37 +425,17 @@ def main(argv=None) -> int:
             # model is actually trained on: shifting before it, at 33 %, moved
             # 64 full-resolution rows, i.e. 21 subsampled steps out of 64.
             X = shift_past_only(X, roles, horizon)
-        log.info("%s: %d feature(s), %d past-only lagged by %d steps",
-                 args.model, len(X.columns), len(roles["past_only"]), horizon)
+        # Same feature builder the reported cell uses, otherwise the parameters are
+        # searched for a different input mapping.
+        X = attach_target_features(X, y, horizon, per_day)
+        log.info("%s: %d feature(s), %d past-only lagged by %d steps, "
+                 "%d target-history column(s)",
+                 args.model, len(X.columns), len(roles["past_only"]), horizon,
+                 len([c for c in X.columns if c.startswith("y_")]))
 
         def objective(trial):
             params = expand_params("LightGBM", SUGGESTERS["LightGBM"](trial))
             return lightgbm_objective(params, X, y, windows, args.seed, trial)
-
-    elif args.model == "TFT":
-        from gluonts.mx.model.tft import TemporalFusionTransformerEstimator
-
-        def objective(trial):
-            params = expand_params("TFT", SUGGESTERS["TFT"](trial))
-            return gluonts_objective(TemporalFusionTransformerEstimator, params, frame, windows,
-                                     args.max_steps, freq, args.seed, args.gpu, args.level,
-                                     trial)
-
-    else:
-        import neuralforecast.models as nf_models
-
-        if args.model == "TimeXer":
-            # The variant that reads measured covariates, i.e. the class the reported
-            # cell runs, so tuned values land on the same architecture.
-            from models.models_neuralforecast import TimeXerHist
-            model_class = TimeXerHist
-        else:
-            model_class = getattr(nf_models, args.model)
-
-        def objective(trial):
-            params = expand_params(args.model, SUGGESTERS[args.model](trial))
-            return neuralforecast_objective(model_class, params, frame, windows,
-                                            args.max_steps, freq, args.seed, args.gpu, trial)
 
     storage = f"sqlite:///{args.out_dir / 'optuna.db'}"
     args.out_dir.mkdir(parents=True, exist_ok=True)
