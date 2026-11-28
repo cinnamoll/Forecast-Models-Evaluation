@@ -15,18 +15,16 @@ and is the robustness check the proposal asks for.
 
 Which models can be explained, and how:
 
-* ``LightGBM`` — TreeSHAP is exact, but its design matrix has **no lag**, so its
-  game has covariate players only.  That is reported, not hidden.
-* ``TFT`` — the GluonTS predictor accepts a new ``ListDataset`` per coalition, so
-  the game is clean without refitting.
-* ``Chronos2`` / ``Timestral`` / ``TimesFM3`` — zero-shot, covariates are plain
-  arrays, so a coalition is just a new input mapping.  These three are the
-  default model set: ``plan/scripts.md`` runs the covariate flow on them only.
-* ``DeepNPTS`` / ``PatchTST`` / ``TCN`` — NeuralForecast freezes the context and
-  ``hist_exog`` into the fitted dataset, so a clean game needs a refit per
-  coalition.  That is enabled explicitly with ``--allow-refit`` (and then the
-  player set is restricted to covariate blocks to keep the cost finite); without
-  it the model is skipped with the reason.
+* ``LightGBM`` — one fitted booster over the row's own design matrix, so a
+  coalition is a new matrix; its matrix has **no lag**, so a covariate-only game
+  is the honest one (reported, not hidden).
+* ``TFT`` — a trained GluonTS predictor predicts on a new ``ListDataset``.
+* ``TCN`` / ``DeepNPTS`` / ``TimeXer`` — NeuralForecast freezes the context and
+  ``hist_exog`` into the fitted dataset, so the game re-runs the fitted module on
+  a window built by ``utils/xai_predictors.py``; that path reproduces
+  ``nf.predict()`` bit for bit (max |diff| = 0.0 on a synthetic cell), so no
+  refit per coalition is needed.  ``TimeXer`` is explained through ``TimeXerHist``,
+  the class the benchmark cell runs.
 
 Usage
 -----
@@ -67,7 +65,8 @@ from utils.timeshap import (apply_coalition, additivity_residual, covariate_play
 
 #: Models whose explanation needs no refit: a new input mapping for the zero-shot
 #: checkpoints, exact TreeSHAP for LightGBM.
-CLEAN_GAME_MODELS = ("LightGBM", "TFT", "Chronos2", "Timestral", "TimesFM3")
+CLEAN_GAME_MODELS = ("LightGBM", "TFT", "Chronos2", "Timestral", "TimesFM3",
+                     "TCN", "DeepNPTS", "TimeXer")
 
 #: Default model set: the covariate flow of ``plan/scripts.md`` covers these three
 #: zero-shot checkpoints only.  Nothing is trained, so there is nothing to tune.
@@ -220,6 +219,32 @@ def make_predictor(model: str, frame: pd.DataFrame, roles: dict, horizon: int, f
     if model == "TimesFM3":
         return timesfm3_predictor(frame, roles, horizon, gpu, level), True
 
+    # Trainable benchmark models: fitted once, scored per coalition without refit
+    # (utils/xai_predictors.py; the nf path reproduces nf.predict bit for bit).
+    from utils.xai_predictors import (lightgbm_predictor, neuralforecast_predictor,
+                                      tft_predictor)
+
+    log = logging.getLogger("timeshap")
+    if model == "LightGBM":
+        return lightgbm_predictor(frame, roles, horizon, gpu, params, log=log), True
+    if model == "TFT":
+        import mxnet as mx
+
+        from utils.device import uses_gpu
+        ctx = mx.gpu(gpu) if uses_gpu(gpu) else mx.cpu()
+        return tft_predictor(frame, roles, horizon, freq, epochs, ctx, params, level, log=log), True
+    if model in ("TCN", "DeepNPTS", "TimeXer"):
+        import neuralforecast.models as nf_models
+
+        if model == "TimeXer":
+            from models.models_neuralforecast import TimeXerHist
+            model_class = TimeXerHist
+        else:
+            model_class = getattr(nf_models, model)
+        return neuralforecast_predictor(model_class, frame, roles, horizon, freq, epochs,
+                                        gpu, params, log=log), True
+    raise ValueError(f"no predictor for {model!r}")
+
 def explain(model: str, frame: pd.DataFrame, roles: dict, horizon: int, per_day: int,
             mode: str, predict, include_temporal: bool, out_dir: Path,
             sampling: float, level: str, per_variable: bool = False,
@@ -295,7 +320,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="TimeSHAP explanation of the covariate models.")
     parser.add_argument("--dataset", required=True, choices=["belgium", "germany", "london", "zonnedael"])
     parser.add_argument("--series", required=True)
-    parser.add_argument("--models", nargs="+", choices=list(("Chronos2", "Timestral", "TimesFM3")), default=list(DEFAULT_MODELS))
+    parser.add_argument("--models", nargs="+", choices=list(CLEAN_GAME_MODELS), default=list(DEFAULT_MODELS))
     parser.add_argument("--level", default="COV", choices=list(("L0", "COV")))
     parser.add_argument("--sampling", type=float, default=100.0)
     parser.add_argument("--mode", choices=["background", "mean", "zero"], default="background",

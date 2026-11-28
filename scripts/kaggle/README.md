@@ -114,23 +114,34 @@ Chạy nền để không giữ cell (session vẫn phải còn sống):
     > /kaggle/working/run_germany.log 2>&1 &
 ```
 
-## Cell 6 — XAI (TimeSHAP, per-variable)
+## Cell 6 — XAI: so sánh 5 model (TimeSHAP, per-variable)
 
 ```python
-# in ra trước: player set + số coalition, không tốn GPU
+# in player set + số coalition trước, không tốn GPU
 !cd /kaggle/working/Forecast-Models-Evaluation && source /kaggle/working/env.sh && \
     DRY=0 XAI_DRY_CHECK=1 DATASETS="london" bash scripts/kaggle/04_xai.sh
 
-# chạy thật
+# chạy thật: LightGBM, TCN, DeepNPTS, TimeXer (neuralforecast/statsml) + TFT (gluonts)
 !cd /kaggle/working/Forecast-Models-Evaluation && source /kaggle/working/env.sh && \
-    DATASETS="germany london" MODELS="Chronos2 Timestral TimesFM3" bash scripts/kaggle/04_xai.sh
+    DATASETS="germany london" bash scripts/kaggle/04_xai.sh
 ```
 
-- Game liệt kê **đúng** (không sampling): mỗi cell là `2^players` lần gọi model. London/COV với 5 biến
-  + 4 player thời gian = 9 player → 512 coalition (đã đo bằng `--dry-run`), nên rất rẻ; Belgium 8 series thì ×8.
-- `PER_VARIABLE=1` (mặc định) → mỗi biến là một player riêng, không gộp block.
-- Chỉ 3 checkpoint có predictor trong `make_predictor()`: `Chronos2`, `Timestral` (env `chronos`), `TimesFM3` (env `timesfm3`).
-  `TFT`, `LightGBM`, `TCN`, `DeepNPTS`, `TimeXer` bị `--models` từ chối — docstring của script có nhắc chúng nhưng code chưa có nhánh.
+- Mặc định `COVARIATE_ONLY=1` và `PER_VARIABLE=1`: 5 player biến → 32 coalition mỗi model, đây là cấu hình duy nhất
+  cả 5 model cùng chơi được (LightGBM không có channel context). Bỏ `COVARIATE_ONLY` thì thêm 4 player thời gian → ×16.
+- Không refit per coalition: `utils/xai_predictors.py` fit **một** lần rồi chấm từng coalition. Đường NeuralForecast
+  (TCN, DeepNPTS, TimeXer) dựng lại đúng window + chuẩn hoá của `_base_model` và đã đối chiếu với `nf.predict()`
+  trên frame thật: `max|diff| = 0.0` cho cả TCN và TimeXerHist.
+- Additivity residual mỗi game = 0 (framework assert < 1e-6), nên φ cộng lại đúng bằng dự đoán.
+- Kết quả đo trên london/COV, sampling 25, 2 epoch (chỉ để chạy được, không phải số để báo cáo):
+
+        group share   LightGBM     TCN  DeepNPTS  TimeXer
+        hour            0.4606  0.2337    0.1972   0.8026
+        dayofweek       0.1113  0.6371    0.1914   0.1616
+        temperature     0.1593  0.0036    0.1792   0.0075
+        humidity        0.1372  0.0038    0.1664   0.0106
+        cloud_cover     0.1315  0.1219    0.2658   0.0177
+
+- TFT (env `gluonts`) chưa chạy được trên máy dev vì host không có env đó — code đã nối nhưng phải xác nhận trên Kaggle.
 - Resume theo `(dataset, series, model)`: có `coalitions.json` là SKIP; log trong `$XAI_OUT/logs/`.
 
 ## Cell 7 — theo dõi

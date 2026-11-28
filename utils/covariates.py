@@ -372,7 +372,13 @@ def restrict_columns(frame: pd.DataFrame, roles: dict, keep) -> tuple:
     wanted = set(keep)
     labels = [c for c in ("unique_id", "ds", "y") if c in frame.columns]
     pruned = frame[labels + [c for c in frame.columns if c in wanted]]
-    return pruned, roles_for(pruned)
+    # Roles describe covariates; the labels are carried along for the caller but are
+    # not channels (they would otherwise land in ``past_only`` and be handed to a
+    # model as features).
+    covariates = [c for c in pruned.columns if c not in ("unique_id", "ds", "y")]
+    if not covariates:
+        return pruned, {"known_future": [], "past_only": [], "static": [], "categorical": []}
+    return pruned, roles_for(pruned[covariates])
 
 
 def build_covariates(dataset: str, entity: str, index: pd.DatetimeIndex, task: str,

@@ -5,14 +5,14 @@
 #   DRY=1 bash scripts/kaggle/04_xai.sh                # print the commands, run nothing
 #   DATASETS="london" SERIES_LIST="london_load" MODELS="Chronos2" bash scripts/kaggle/04_xai.sh
 #
-# Only the models that have a predictor work: Chronos2, Timestral (env chronos) and
-# TimesFM3 (env timesfm3).  TFT / LightGBM / TCN / DeepNPTS / TimeXer are named in the
-# script's docstring but `make_predictor()` has no branch for them, so the CLI refuses
-# them and nothing is queued here.
+# Only these have a predictor: the three checkpoints plus the five trainable models
+# (utils/xai_predictors.py re-scores a fitted model per coalition, no refit).
+# Keep MODELS to one conda env per invocation if a cell must be reproducible alone.
 #
 # Cost: the game is enumerated exactly, so one run is 2^players model calls.  With
-# --per-variable and the five covariate players that is 2^9 at 4 temporal players.
-# Pass DRY=0 after a --dry-run of one cell (XAI_DRY_CHECK=1) has quoted the real count.
+# --per-variable and the five covariate players that is 2^5 = 32 per model, which is
+# what makes the five-model comparison cheap; adding temporal players multiplies it
+# by 2^4.  Pass XAI_DRY_CHECK=1 first to print the real count.
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/kaggle/working/Forecast-Models-Evaluation}"
@@ -23,6 +23,7 @@ SAMPLING="${SAMPLING:-100}"
 MODE="${MODE:-background}"
 COVARIATES="${COVARIATES:-hour dayofweek humidity temperature cloud_cover}"
 PER_VARIABLE="${PER_VARIABLE:-1}"
+COVARIATE_ONLY="${COVARIATE_ONLY:-1}"
 MAX_PLAYERS="${MAX_PLAYERS:-12}"
 EPOCHS="${EPOCHS:-100}"
 GPU="${GPU:-0}"
@@ -30,7 +31,7 @@ DRY="${DRY:-0}"
 XAI_DRY_CHECK="${XAI_DRY_CHECK:-0}"
 PYTHON="${PYTHON:-python}"
 
-MODELS="${MODELS:-Chronos2 Timestral TimesFM3}"
+MODELS="${MODELS:-LightGBM TCN DeepNPTS TimeXer TFT}"
 DATASETS="${DATASETS:-germany london}"
 LOG_DIR="$XAI_OUT/logs"
 mkdir -p "$LOG_DIR"
@@ -85,6 +86,7 @@ for dataset in $DATASETS; do
                --sampling "$SAMPLING" --mode "$MODE" --epochs "$EPOCHS" --gpu "$GPU"
                --covariates $COVARIATES --max-players "$MAX_PLAYERS" --out "$out")
       [ "$PER_VARIABLE" = "1" ] && command+=(--per-variable)
+      [ "$COVARIATE_ONLY" = "1" ] && command+=(--covariate-only)
       [ "$XAI_DRY_CHECK" = "1" ] && command+=(--dry-run)
       echo "XAI   $dataset/$series/$model -> $out/$model"
       echo "      ${command[*]}"
