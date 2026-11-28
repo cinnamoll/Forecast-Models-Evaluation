@@ -33,7 +33,17 @@ if str(REPO_DIR / "scripts") not in sys.path:
 # model scripts only ever savefig, so the headless backend is the right one here.
 os.environ["MPLBACKEND"] = "Agg"
 
-import run_benchmark as runner  # noqa: E402
+try:
+    import run_benchmark as runner  # noqa: E402
+except ModuleNotFoundError as exc:
+    # The runner's own imports (utils/protocol.py -> pandas) run in *this* interpreter,
+    # not in the model envs it shells out to, so the orchestrator python needs them too.
+    raise SystemExit(
+        f"FAIL: {exc}.  This wrapper imports run_benchmark in the current interpreter, which\n"
+        f"  needs pandas: run it with a python that has one, e.g.\n"
+        f"    conda run --no-capture-output -n statsml python scripts/kaggle/02_run.py ...\n"
+        f"  or re-run bash scripts/kaggle/01_setup.sh (it installs pandas into the conda base)."
+    ) from None
 
 #: model -> conda env the runner will call, so a missing env fails here instead of
 #: after the first import inside a subprocess.

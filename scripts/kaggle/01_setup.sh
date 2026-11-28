@@ -77,6 +77,17 @@ else
   echo "== skipping torch probe: neuralforecast env not present"
 fi
 
+# 02_run.py imports utils/protocol.py (pandas) before it shells out to the model
+# envs, and env.sh puts the conda *base* on PATH -- a base built by the installer has
+# no pandas, only the model envs do.  Without this the first run dies at import.
+if command -v conda >/dev/null 2>&1; then
+  BASE_PY="$(conda info --base)/bin/python"
+  if ! "$BASE_PY" -c "import pandas" >/dev/null 2>&1; then
+    echo "== installing pandas into the conda base ($(conda info --base)) for scripts/kaggle/02_run.py"
+    "$BASE_PY" -m pip install -q "pandas>=2,<4"
+  fi
+fi
+
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || echo "no nvidia-smi"
 
 # Defaults, not assignments: a caller that exports RESULTS=/tmp/x keeps it.  RESULTS
