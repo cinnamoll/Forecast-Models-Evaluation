@@ -12,9 +12,11 @@ shell out to, and forwards the rest of the arguments untouched.
 
     python scripts/kaggle/02_run.py --models "LightGBM Chronos2 Timestral TimesFM3" --level COV
 
-The results root follows ``--level`` when neither ``--results-dir`` nor ``$RESULTS``
-is given: COV writes into ``<repo>/results_covariate``, L0 into ``<repo>/results``.
-That is the layout the tuning JSONs and the TimeSHAP wrapper expect too.
+The results root is hardcoded to ``/kaggle/working/results_cov_new`` on Kaggle and
+``<repo>/results_cov_new`` elsewhere -- the same folder ``scripts/kaggle/_bootstrap.sh``
+hands 03_tune.sh and 04_xai.sh, because ``export RESULTS=...`` typed in a notebook cell
+is a SyntaxError.  ``--results-dir`` or ``$RESULTS`` still wins; COV and L0 do not
+collide, since the level is a path component of the cell tree.
 """
 from __future__ import annotations
 
@@ -73,6 +75,15 @@ def ensure_conda() -> None:
             return
 
 
+def default_results_root() -> Path:
+    """Same hardcoded root as scripts/kaggle/_bootstrap.sh: one folder per run, and
+    ``export RESULTS=...`` in a notebook cell is a SyntaxError, so it cannot be required.
+    Outside Kaggle the folder sits next to the repo instead of in /kaggle/working."""
+    if Path("/kaggle/working").is_dir():
+        return Path("/kaggle/working/results_cov_new")
+    return REPO_DIR / "results_cov_new"
+
+
 def conda_envs() -> set[str]:
     try:
         out = subprocess.run(["conda", "env", "list"], capture_output=True, text=True,
@@ -108,8 +119,7 @@ def main(argv=None) -> int:
         return 2
     if args.results_dir is None:
         exported = os.environ.get("RESULTS")
-        args.results_dir = (Path(exported) if exported else
-                            REPO_DIR / ("results_covariate" if args.level == "COV" else "results"))
+        args.results_dir = Path(exported) if exported else default_results_root()
 
     original = runner.command_for
 

@@ -19,9 +19,6 @@ ENV_FILE="${ENV_FILE:-/kaggle/working/env.sh}"
 ENVS="${ENVS:-statsml chronos timesfm3}"
 INSTALL="${INSTALL:-1}"
 PYTHON="${PYTHON:-python}"
-# Where the dry run below writes its (empty) plan: the COV tree, since that is the
-# level being rehearsed.
-DRY_ROOT="${RESULTS:-$REPO_DIR/results_covariate}"
 # Ephemeral by default: a conda tree in /kaggle/working is 5-8 GB against the 20 GB
 # output cap and every Save Version.  Set CONDA_HOME=/kaggle/working/miniforge3 only
 # if you would rather pay that than rebuild the envs each session.
@@ -33,7 +30,6 @@ if [ ! -d "$REPO_DIR/requirements" ]; then
   echo "  and point REPO_DIR at /kaggle/input/<dataset>/Forecast-Models-Evaluation" >&2
   exit 1
 fi
-mkdir -p "$DRY_ROOT"
 
 if [ "$INSTALL" = "1" ]; then
   if ! command -v conda >/dev/null 2>&1 && [ ! -x "$CONDA_HOME/bin/conda" ]; then
@@ -104,7 +100,7 @@ cd "$REPO_DIR"
 if command -v conda >/dev/null 2>&1; then
   echo "== dry run: the commands the sweep would execute"
   "$PYTHON" scripts/kaggle/02_run.py --dry-run \
-    --models LightGBM --level COV --results-dir "$DRY_ROOT" \
+    --models LightGBM --level COV \
     --datasets "${DRY_DATASETS:-germany}" --samplings "${DRY_SAMPLINGS:-25}"
 else
   echo "== conda absent: skipping the dry run"

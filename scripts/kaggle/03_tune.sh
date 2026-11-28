@@ -12,9 +12,6 @@
 # starting over; a study that already holds TRIALS trials is skipped.
 set -euo pipefail
 
-# `bash scripts/kaggle/03_tune.sh` in a fresh cell has no conda on PATH.
-. "$(dirname "$0")/_conda.sh"
-
 # Colab exports MPLBACKEND=module://matplotlib_inline.backend_inline and the conda envs
 # do not have matplotlib_inline, so any child that imports pyplot dies with
 # "ValueError: Key backend: ... is not a valid value for backend".  Force the headless
@@ -23,11 +20,10 @@ export MPLBACKEND=Agg
 
 REPO_DIR="${REPO_DIR:-/kaggle/working/Forecast-Models-Evaluation}"
 LEVEL="${LEVEL:-COV}"
-# Results root follows the level, so the tuning JSONs land in the same tree the
-# benchmark cells of that level read them from: COV -> results_covariate, L0 -> results.
-# Export RESULTS (or the env file of 01_setup.sh) to pin one root for both levels.
-LEVEL_ROOT="results"; [ "$LEVEL" = "COV" ] && LEVEL_ROOT="results_covariate"
-RESULTS="${RESULTS:-$REPO_DIR/$LEVEL_ROOT}"
+# conda on PATH plus the hardcoded results root: a fresh cell has neither, and
+# `export RESULTS=...` in a notebook cell is a SyntaxError.
+. "$(dirname "$0")/_bootstrap.sh"
+RESULTS="${RESULTS:-$KAGGLE_RESULTS}"
 SAMPLING="${SAMPLING:-100}"
 MODELS="${MODELS:-LightGBM}"
 TUNE_SETS="${TUNE_SETS:-germany zonnedael9 belgium_pv1}"
