@@ -27,13 +27,32 @@ if [ ! -d "$REPO_DIR/requirements" ]; then
 fi
 
 if [ "$INSTALL" = "1" ]; then
+  # Colab exports PYTHONPATH; a conda env create then picks up base packages by
+  # accident and conda warns about it.  Nothing in this repo needs it.
+  unset PYTHONPATH
   if [ ! -x "$CONDA_HOME/bin/conda" ]; then
-    echo "== installing miniconda into $CONDA_HOME (~2 min)"
-    wget -q -O /tmp/miniconda.sh \
-      https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash /tmp/miniconda.sh -b -p "$CONDA_HOME"
+    # Miniforge, not Miniconda: repo.anaconda.com now refuses `conda env create`
+    # until its Terms of Service are accepted ("CondaToSNonInteractiveError"), and
+    # Miniforge ships conda-forge only, which has no such gate.  Every requirement
+    # file here lists conda-forge/pytorch/nvidia explicitly.
+    echo "== installing miniforge into $CONDA_HOME (~2 min)"
+    wget -q -O /tmp/miniforge.sh \
+      https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+    bash /tmp/miniforge.sh -b -p "$CONDA_HOME"
   fi
   export PATH="$CONDA_HOME/bin:$PATH"
+  # Belt and braces: if a marker or a stale config still reaches repo.anaconda.com,
+  # accept the two channels non-interactively (no-op when they are not configured).
+  conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main \
+    >/dev/null 2>&1 || true
+  conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r \
+    >/dev/null 2>&1 || true
+  # An older Miniconda left over from a previous cell has no `conda tos`; say so
+  # instead of letting `conda env create` fail with the ToS error again.
+  if ! conda tos list >/dev/null 2>&1 && command -v conda | grep -q miniconda; then
+    echo "NOTE: this conda predates 'conda tos'. If env creation fails on Terms of Service:"
+    echo "      rm -rf $CONDA_HOME   # then re-run this script, it now installs miniforge"
+  fi
   for env in $ENVS; do
     if conda env list | awk 'NF {print $1}' | grep -qx "$env"; then
       echo "== env $env already present"
@@ -78,8 +97,8 @@ echo "== wrote $ENV_FILE (source it in every later cell)"
 
 cd "$REPO_DIR"
 case "$ENVS" in
-  *gluonts*) script=scripts/colab/03_xai_gluonts.sh ;;
-  *) script=scripts/colab/02_xai_neuralforecast.sh ;;
+  *gluonts*) script=scripts/colab/05_xai_gluonts.sh ;;
+  *) script=scripts/colab/04_xai_neuralforecast.sh ;;
 esac
 if command -v conda >/dev/null 2>&1; then
   echo "== dry run: $script"

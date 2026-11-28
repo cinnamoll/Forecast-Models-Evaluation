@@ -1,23 +1,25 @@
-# Chạy TimeSHAP (5 model) trên Colab — tách theo từng model và từng env
+# Chạy trên Colab: setup → tune → run COV (transfer learning) → TimeSHAP
 
-| file | việc |
-|---|---|
-| `01_setup.sh <env>` | Miniconda vào `/content`, tạo **một** conda env, probe torch CUDA, ghi `/content/env.sh`, dry run |
-| `02_xai_neuralforecast.sh` | TimeXer, TCN, DeepNPTS (env `neuralforecast`) — `MODEL=` để chạy một model |
-| `03_xai_gluonts.sh` | TFT (env `gluonts`, python 3.7 + mxnet cu112) — session riêng |
+| file | việc | env |
+|---|---|---|
+| `01_setup.sh <env>` | Miniforge vào `/content`, tạo **một** env, probe torch CUDA, ghi `/content/env.sh` | — |
+| `02_tune.sh` | Optuna search — bước 1 của transfer learning | `neuralforecast` / `gluonts` theo model |
+| `03_run.sh` | Chạy cell COV trên params đã tune, tự thêm `--gpu` | như trên |
+| `04_xai_neuralforecast.sh` | TimeSHAP cho TimeXer, TCN, DeepNPTS | `neuralforecast` |
+| `05_xai_gluonts.sh` | TimeSHAP cho TFT | `gluonts` (python 3.7 + mxnet cu112) |
 
-Roster thật nằm ở `scripts/kaggle/04_xai.sh` (dataset → series, resume theo `(dataset, series, model)`,
-`--per-variable --covariate-only`, `--gpu 0`); hai script Colab chỉ ghim path + env + danh sách model,
-nên chỉ có một chỗ cài đặt vòng lặp.
+Roster thật nằm ở `scripts/kaggle/02_run.py` (run), `scripts/kaggle/03_tune.sh` (tune),
+`scripts/kaggle/04_xai.sh` (xai). Script Colab chỉ ghim path `/content`, results trên Drive,
+danh sách model và **kiểm tra env trước khi chạy** (thiếu env thì in lệnh setup rồi thoát 2).
 
-## Cell 0 — kiểm runtime
+## Cell 0 — runtime
 
 ```python
 !nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
-!df -h /content | tail -1        # env neuralforecast ~5 GB, gluonts ~2 GB
+!df -h /content | tail -1      # env neuralforecast ~5 GB
 ```
 
-Runtime → Change runtime type → **T4 GPU**. Một session free ~không quá 12 h và tự ngắt khi idle.
+Runtime → Change runtime type → **T4 GPU**.
 
 ## Cell 1 — code + Drive
 
@@ -28,48 +30,59 @@ drive.mount('/content/drive')
 !mkdir -p /content/drive/MyDrive/forecast-results
 ```
 
-Code phải đã push: `scripts/colab/`, `scripts/kaggle/04_xai.sh`, `scripts/xai_timeshap.py`,
-`utils/xai_predictors.py`, `utils/covariates.py`.
-
-## Cell 2 — setup env `neuralforecast` (~10-20 phút)
+## Cell 2 — setup env `neuralforecast`
 
 ```python
 !cd /content/Forecast-Models-Evaluation && bash scripts/colab/01_setup.sh neuralforecast
 ```
 
-Kết thúc bằng 6 dòng `XAI ... --gpu 0` (dry run của 3 model × 2 dataset). Nếu in `FAIL: CPU-only torch`
-thì chạy đúng dòng `pip install` nó đưa ra.
+- Cài **Miniforge** (conda-forge), không phải Miniconda: `repo.anaconda.com` chặn `conda env create`
+  khi chưa accept Terms of Service (`CondaToSNonInteractiveError`). Script cũng `unset PYTHONPATH`
+  (Colab export biến này, conda cảnh báo và có thể lẫn package).
+- Đã có `/content/miniconda3` từ lần chạy trước mà vẫn lỗi ToS: `!rm -rf /content/miniconda3` rồi chạy lại cell.
+- In `FAIL: CPU-only torch` thì chạy đúng dòng `pip install` nó đưa ra.
 
-## Cell 3 — dry run một cell (không tốn GPU)
-
-```python
-!cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
-    DRY=0 XAI_DRY_CHECK=1 DATASETS="london" MODEL=TimeXer bash scripts/colab/02_xai_neuralforecast.sh
-```
-
-In ra player set + số coalition: 5 player biến → **32 coalition**, horizon và context như cell thật.
-
-## Cell 4 — chạy từng model (mỗi model một cell, resume độc lập)
+## Cell 3 — tune (transfer learning, bước 1)
 
 ```python
 !cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
-    MODEL=TimeXer DATASETS="germany london" bash scripts/colab/02_xai_neuralforecast.sh
+    MODELS="TimeXer TCN DeepNPTS" TRIALS=30 HOURS=1.5 bash scripts/colab/02_tune.sh
+```
+
+`scripts/tune_optuna.py` tune trên **3 series** (`germany`, `zonnedael9`, `belgium_pv1`); các cell khác
+mượn params theo map trong `utils/tuning.py` (london ← zonnedael9, belgium ← belgium_pv1, …) — đó chính là
+transfer learning của repo. JSON ghi vào `$RESULTS/tuning/` (trên Drive nên session sau vẫn còn), study nằm
+trong `optuna.db` nên chạy lại là **cộng thêm trial**, đủ `TRIALS` thì `SKIP`. `DRY=1` để in lệnh trước.
+
+## Cell 4 — chạy cell COV (bước 2)
+
+```python
+# cell rẻ trước
+!cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
+    MODELS="TimeXer TCN DeepNPTS" DATASETS="germany" SAMPLINGS="25" bash scripts/colab/03_run.sh
 ```
 
 ```python
+# rồi mở rộng
 !cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
-    MODEL=TCN DATASETS="germany london" bash scripts/colab/02_xai_neuralforecast.sh
+    MODELS="TimeXer TCN DeepNPTS" DATASETS="germany london zonnedael belgium" \
+    SAMPLINGS="25 33.333333 50 100" bash scripts/colab/03_run.sh
 ```
+
+Script tự thêm `--gpu 0` và `--params_json <RESULTS>/tuning/…` khi file tuned tồn tại; cell nào đủ 10 run
+thì lần chạy sau `SKIP`, nên Colab ngắt giữa đường chỉ mất cell đang dở.
+
+## Cell 5 — TimeSHAP (từng model)
 
 ```python
 !cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
-    MODEL=DeepNPTS DATASETS="germany london" bash scripts/colab/02_xai_neuralforecast.sh
+    MODEL=TimeXer DATASETS="germany london" bash scripts/colab/04_xai_neuralforecast.sh
 ```
 
-Một lệnh cho cả ba (cùng env, tuần tự): bỏ `MODEL=`, chạy `bash scripts/colab/02_xai_neuralforecast.sh`.
-Model nào đã có `coalitions.json` thì `SKIP`, nên chạy lại sau khi Colab ngắt chỉ tốn cell đang dở.
+`MODEL=TCN`, `MODEL=DeepNPTS` tương tự; bỏ `MODEL=` để chạy cả ba. 5 player biến → 32 coalition,
+residual = 0; thời gian nằm ở một lần fit mỗi cell.
 
-## Cell 5 — TFT, session riêng (env `gluonts`)
+## Cell 6 — session riêng cho TFT (env `gluonts`)
 
 ```python
 !cd /content/Forecast-Models-Evaluation && bash scripts/colab/01_setup.sh gluonts
@@ -77,27 +90,35 @@ Model nào đã có `coalitions.json` thì `SKIP`, nên chạy lại sau khi Col
 
 ```python
 !cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
-    DATASETS="germany london" bash scripts/colab/03_xai_gluonts.sh
+    MODELS=TFT TRIALS=30 bash scripts/colab/02_tune.sh
 ```
 
-## Cell 6 — theo dõi / lấy kết quả
+```python
+!cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
+    MODELS=TFT DATASETS="germany london" SAMPLINGS="25" bash scripts/colab/03_run.sh
+```
+
+```python
+!cd /content/Forecast-Models-Evaluation && source /content/env.sh && \
+    DATASETS="germany london" bash scripts/colab/05_xai_gluonts.sh
+```
+
+## Cell 7 — theo dõi
 
 ```python
 !tail -n 20 /content/drive/MyDrive/forecast-results/xai_timeshap/logs/*.log | tail -40
-!find /content/drive/MyDrive/forecast-results/xai_timeshap -name coalitions.json | wc -l
+!find /content/drive/MyDrive/forecast-results -name model_metrics_summary.csv | wc -l
 !cat /content/drive/MyDrive/forecast-results/xai_timeshap/london/london_load_COV_100/group_shares_all_models.csv
 ```
 
-`group_shares_all_models.csv` chỉ gộp các model **chạy chung một lệnh**; chạy từng model riêng thì mỗi model
-có `group_shares.csv` + `player_shares.csv` + `shap_values.csv` trong thư mục của nó — gộp lại bằng cách đọc
-các file đó (chúng nằm trên Drive nên không mất khi runtime kết thúc).
-
 ## Cảnh báo
 
-- Env nằm trong `/content` → **mất khi session kết thúc**, phải chạy lại Cell 2 (~10-20 phút). Muốn giữ:
-  `CONDA_HOME=/content/drive/MyDrive/miniconda3 bash scripts/colab/01_setup.sh neuralforecast` (chậm hơn vì Drive).
-- `--epochs` mặc định 100. Để so sánh công bằng với benchmark thì giữ 100; muốn xem nhanh thì `EPOCHS=10`.
-- Mỗi game là 32 coalition nên rất rẻ; chi phí thật nằm ở **fit một lần per (model, dataset, series)** —
-  TimeXer/TCN/DeepNPTS dùng `input_size = 2*horizon`, nên sampling 100 sẽ chậm hơn 25 đáng kể.
-- TFT cần `mxnet-cu112`: nếu session Colab báo lỗi CUDA khi train, chạy TFT bằng `GPU=-1` (CPU) cho xong game
-  rồi ghi rõ trong phụ lục là cell đó chạy CPU.
+- Env trong `/content` **mất khi session kết thúc** → chạy lại Cell 2 mỗi session (8-20 phút). Muốn giữ:
+  `CONDA_HOME=/content/drive/MyDrive/miniconda3 bash scripts/colab/01_setup.sh neuralforecast`.
+- `RESULTS` phải nằm trên Drive; nếu không, `tuning/*.json` mất cùng session và bước transfer learning
+  ở lần sau lại quay về paper defaults.
+- Tune 3 model × 3 tuning set × `HOURS=1.5` ≈ 13.5 h > một session Colab: chia `MODELS=` hoặc giảm `HOURS`.
+- `--epochs` mặc định 100 (khớp benchmark); `EPOCHS=10` chỉ để xem nhanh.
+- `group_shares_all_models.csv` chỉ gộp các model chạy chung một lệnh; chạy riêng từng model thì đọc
+  `group_shares.csv` / `player_shares.csv` trong thư mục của model đó.
+- TFT cần `mxnet-cu112`: nếu lỗi CUDA khi train, chạy `GPU=-1` (CPU) rồi ghi rõ trong phụ lục.
