@@ -228,8 +228,9 @@ residual = 0; thời gian nằm ở một lần fit mỗi cell.
   (`scripts/kaggle/03_tune.sh`, `04_xai.sh`, `02_run.py`) và trong `/content/env.sh`.
 - `ModuleNotFoundError: No module named 'pandas'` — `source /content/env.sh` đặt conda **base** lên đầu PATH,
   nên `python` của driver là base env (không có pandas), trong khi `scripts/kaggle/02_run.py` cần pandas để
-  import `utils.protocol`. `_common.sh` giờ chọn `$CONDA_HOME/envs/neuralforecast/bin/python` (hoặc base, hoặc
-  `python3`) bằng cách thử `import pandas`.
+  import `utils.protocol`. `_common.sh` quét **mọi env** của `$CONDA_HOME` và lấy python đầu tiên import được
+  pandas, ưu tiên bản ≥ 3.8; session chỉ có `gluonts` (python 3.7) vẫn chạy được và in
+  `NOTE: no python 3.8+ with pandas found`, còn không có env nào thì `FAIL: … run 01_setup.sh first`.
 - Traceback chỉ vào `…/Forecast-Models-Evaluation` dù đang đứng ở `…-1` — `/content/env.sh` export `REPO_DIR`
   của clone cũ. `_common.sh` chốt repo theo vị trí script và in `NOTE: REPO_DIR=… is another checkout` nếu
   biến môi trường trỏ chỗ khác.
