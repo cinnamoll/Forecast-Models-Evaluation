@@ -21,6 +21,7 @@ SAMPLINGS="${SAMPLINGS:-}"
 LEVEL="${LEVEL:-COV}"
 GPU="${GPU:-0}"
 DRY="${DRY:-0}"
+FORCE="${FORCE:-0}"
 PYTHON="${PYTHON:-python}"
 
 env_for() {
@@ -43,6 +44,7 @@ done
 arguments=(--models $MODELS --level "$LEVEL" --results-dir "$RESULTS")
 [ -n "$DATASETS" ] && arguments+=(--datasets $DATASETS)
 [ -n "$SAMPLINGS" ] && arguments+=(--samplings $SAMPLINGS)
+[ "$FORCE" = "1" ] && arguments+=(--force)
 [ "$DRY" = "1" ] && arguments+=(--dry-run)
 
 echo "== run COV: $MODELS | datasets: ${DATASETS:-all} | samplings: ${SAMPLINGS:-25 33 50 100} | out: $RESULTS"

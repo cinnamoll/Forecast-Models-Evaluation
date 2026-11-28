@@ -24,6 +24,11 @@ REPO_DIR = Path(os.environ.get("REPO_DIR") or Path(__file__).resolve().parents[2
 if str(REPO_DIR / "scripts") not in sys.path:
     sys.path.insert(0, str(REPO_DIR / "scripts"))
 
+# Colab exports MPLBACKEND=module://matplotlib_inline.backend_inline; the conda envs have
+# no matplotlib_inline, so a child that imports pyplot dies on an invalid backend.  The
+# model scripts only ever savefig, so the headless backend is the right one here.
+os.environ["MPLBACKEND"] = "Agg"
+
 import run_benchmark as runner  # noqa: E402
 
 #: model -> conda env the runner will call, so a missing env fails here instead of

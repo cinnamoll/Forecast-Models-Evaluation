@@ -12,6 +12,12 @@
 # starting over; a study that already holds TRIALS trials is skipped.
 set -euo pipefail
 
+# Colab exports MPLBACKEND=module://matplotlib_inline.backend_inline and the conda envs
+# do not have matplotlib_inline, so any child that imports pyplot dies with
+# "ValueError: Key backend: ... is not a valid value for backend".  Force the headless
+# backend: every figure here is written with savefig anyway.
+export MPLBACKEND=Agg
+
 REPO_DIR="${REPO_DIR:-/kaggle/working/Forecast-Models-Evaluation}"
 RESULTS="${RESULTS:-/kaggle/working/results}"
 LEVEL="${LEVEL:-COV}"

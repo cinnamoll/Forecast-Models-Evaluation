@@ -92,6 +92,10 @@ export CONDA_HOME="\${CONDA_HOME:-$CONDA_HOME}"
 export REPO_DIR="\${REPO_DIR:-$REPO_DIR}"
 export RESULTS="\${RESULTS:-$RESULTS}"
 export PATH="$CONDA_HOME/bin:\$PATH"
+# Colab ships MPLBACKEND=module://matplotlib_inline.backend_inline; the conda envs have
+# no matplotlib_inline, so every child that imports pyplot would die on an invalid
+# backend.  Headless Agg is what the savefig-only figure code wants.
+export MPLBACKEND=Agg
 EOF
 echo "== wrote $ENV_FILE (source it in every later cell)"
 
