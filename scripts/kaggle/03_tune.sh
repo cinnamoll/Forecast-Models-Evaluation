@@ -12,6 +12,9 @@
 # starting over; a study that already holds TRIALS trials is skipped.
 set -euo pipefail
 
+# `bash scripts/kaggle/03_tune.sh` in a fresh cell has no conda on PATH.
+. "$(dirname "$0")/_conda.sh"
+
 # Colab exports MPLBACKEND=module://matplotlib_inline.backend_inline and the conda envs
 # do not have matplotlib_inline, so any child that imports pyplot dies with
 # "ValueError: Key backend: ... is not a valid value for backend".  Force the headless

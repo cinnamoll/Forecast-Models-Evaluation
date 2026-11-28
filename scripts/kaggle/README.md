@@ -52,6 +52,18 @@ goc duoi day.
   (tren Kaggle: `/kaggle/working/results_covariate`). `--results-dir` hoac `export RESULTS=...`
   se ghi de ca hai level cung mot goc.
 - `--gpu` mac dinh 0; runner khong them flag do, wrapper nay them.
+- Muon tach mot lan chay ra folder rieng (khong tron voi `results_covariate` cu trong
+  repo): export cung mot goc cho ca ba buoc, vi ca ba doc chung bien nay --
+
+        export RESULTS=/kaggle/working/results_cov_new
+        bash scripts/kaggle/03_tune.sh
+        python scripts/kaggle/02_run.py --models "Chronos2 Timestral TimesFM3" --level COV
+        MODELS="..." bash scripts/kaggle/04_xai.sh
+
+  Ket qua khi do: `$RESULTS/results_<dataset>/<Model>/Sampling_<tag>/COV`,
+  `$RESULTS/tuning/`, `$RESULTS/xai_timeshap/`.
+- Moi script tu tim conda (`. scripts/kaggle/_conda.sh` / `ensure_conda()`), nen chay
+  duoc ngay trong cell moi ma khong can source `env.sh` truoc.
 
 ## 4. TimeSHAP
 

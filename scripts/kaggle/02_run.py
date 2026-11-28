@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -51,6 +52,27 @@ MODEL_ENV = {"LightGBM": "statsml", "Chronos2": "chronos",
              "Timestral": "chronos", "TimesFM3": "timesfm3"}
 
 
+def flatten(values):
+    """argparse hands back one token per element, so ``--models "A B"`` arrives as a
+    single string and ``MODEL_ENV["A B"]`` would raise KeyError.  Split it, so both the
+    docstring's quoted form and the plain ``--models A B`` work."""
+    return [item for value in values for item in str(value).split()]
+
+
+def ensure_conda() -> None:
+    """The runner shells out to ``conda run -n <env>``, and a fresh Kaggle cell has no
+    conda on PATH; same search as scripts/kaggle/_conda.sh, for the python entry point."""
+    if shutil.which("conda"):
+        return
+    for cand in (os.environ.get("CONDA_HOME", "/tmp/miniforge3"), "/opt/conda",
+                 "~/miniforge3", "~/anaconda3", "~/miniconda3", "/kaggle/working/miniforge3"):
+        exe = Path(cand).expanduser() / "bin" / "conda"
+        if exe.is_file():
+            os.environ["CONDA_HOME"] = str(exe.parent.parent)
+            os.environ["PATH"] = f"{exe.parent}{os.pathsep}{os.environ.get('PATH', '')}"
+            return
+
+
 def conda_envs() -> set[str]:
     try:
         out = subprocess.run(["conda", "env", "list"], capture_output=True, text=True,
@@ -76,6 +98,14 @@ def main(argv=None) -> int:
     parser.add_argument("--force", action="store_true", help="Re-run complete cells.")
     parser.add_argument("--dry-run", action="store_true", help="Print the commands, run nothing.")
     args = parser.parse_args(argv)
+    args.models = flatten(args.models)
+    if args.datasets:
+        args.datasets = flatten(args.datasets)
+    unknown = [m for m in args.models if m not in MODEL_ENV]
+    if unknown:
+        print(f"FAIL: unknown model(s): {', '.join(unknown)}\n"
+              f"  known: {' '.join(MODEL_ENV)}", file=sys.stderr)
+        return 2
     if args.results_dir is None:
         exported = os.environ.get("RESULTS")
         args.results_dir = (Path(exported) if exported else
@@ -92,6 +122,7 @@ def main(argv=None) -> int:
     runner.command_for = command_for_with_gpu
 
     if not args.dry_run:
+        ensure_conda()
         available = conda_envs()
         missing = sorted({MODEL_ENV[m] for m in args.models} - available)
         if missing:
