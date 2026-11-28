@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Transfer-learning step 1 on Colab: the Optuna search that a COV cell borrows from.
 #
-#   bash scripts/colab/04_tune.sh                     # TimeXer, TCN, DeepNPTS on 3 tuning sets
-#   MODELS=TFT bash scripts/colab/04_tune.sh          # in the gluonts session
-#   TRIALS=50 HOURS=3 bash scripts/colab/04_tune.sh
-#   DRY=1 bash scripts/colab/04_tune.sh               # print the commands
+#   bash scripts/colab/02_tune.sh                     # TimeXer, TCN, DeepNPTS on 3 tuning sets
+#   MODELS=TFT bash scripts/colab/02_tune.sh          # in the gluonts session
+#   TRIALS=50 HOURS=3 bash scripts/colab/02_tune.sh
+#   DRY=1 bash scripts/colab/02_tune.sh               # print the commands
 #
 # Writes $RESULTS/tuning/<Model>_<set>_COV_100_v2.json, which is exactly the file
 # scripts/run_benchmark.py passes as --params_json to a COV cell (utils/tuning.py:
@@ -13,7 +13,10 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export REPO_DIR="${REPO_DIR:-/content/Forecast-Models-Evaluation}"
+# Canonical repo root + a launcher python that can import pandas (see _common.sh).
+# shellcheck source=/dev/null
+source "$HERE/_common.sh"
+
 export RESULTS="${RESULTS:-/content/drive/MyDrive/forecast-results}"
 export MODELS="${MODEL:-${MODELS:-TimeXer TCN DeepNPTS}}"
 export TUNE_SETS="${TUNE_SETS:-germany zonnedael9 belgium_pv1}"

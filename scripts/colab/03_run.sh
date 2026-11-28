@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Transfer-learning step 2 on Colab: the COV benchmark cells, with --gpu appended.
 #
-#   bash scripts/colab/05_run.sh                                   # TimeXer, TCN, DeepNPTS
-#   MODELS=TFT bash scripts/colab/05_run.sh                        # in the gluonts session
-#   DATASETS="germany" SAMPLINGS="25" bash scripts/colab/05_run.sh  # a cheap cell first
-#   DRY=1 bash scripts/colab/05_run.sh                             # print the commands
+#   bash scripts/colab/03_run.sh                                   # TimeXer, TCN, DeepNPTS
+#   MODELS=TFT bash scripts/colab/03_run.sh                        # in the gluonts session
+#   DATASETS="germany" SAMPLINGS="25" bash scripts/colab/03_run.sh  # a cheap cell first
+#   DRY=1 bash scripts/colab/03_run.sh                             # print the commands
 #
 # "Transfer learning" is the repo's own flow: every cell runs on the parameters found
 # by scripts/tune_optuna.py on three tuning series (utils/tuning.py maps the rest),
@@ -12,8 +12,10 @@
 # Results land in $RESULTS, so Drive keeps them across Colab sessions.
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export REPO_DIR="${REPO_DIR:-/content/Forecast-Models-Evaluation}"
+# Canonical repo root + a launcher python that can import pandas (see _common.sh).
+# shellcheck source=/dev/null
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
 export RESULTS="${RESULTS:-/content/drive/MyDrive/forecast-results}"
 export MODELS="${MODEL:-${MODELS:-TimeXer TCN DeepNPTS}}"
 DATASETS="${DATASETS:-}"
@@ -22,7 +24,6 @@ LEVEL="${LEVEL:-COV}"
 GPU="${GPU:-0}"
 DRY="${DRY:-0}"
 FORCE="${FORCE:-0}"
-PYTHON="${PYTHON:-python}"
 
 env_for() {
   case "$1" in

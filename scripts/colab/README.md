@@ -7,6 +7,7 @@
 | `03_run.sh` | Chạy cell COV trên params đã tune, tự thêm `--gpu` | như trên |
 | `04_xai_neuralforecast.sh` | TimeSHAP cho TimeXer, TCN, DeepNPTS | `neuralforecast` |
 | `05_xai_gluonts.sh` | TimeSHAP cho TFT | `gluonts` (python 3.7 + mxnet cu112) |
+| `_common.sh` | source chung: chốt repo root theo vị trí script, chọn python có pandas | — |
 
 Roster thật nằm ở `scripts/kaggle/02_run.py` (run), `scripts/kaggle/03_tune.sh` (tune),
 `scripts/kaggle/04_xai.sh` (xai). Script Colab chỉ ghim path `/content`, results trên Drive,
@@ -219,3 +220,20 @@ residual = 0; thời gian nằm ở một lần fit mỗi cell.
 - `group_shares_all_models.csv` chỉ gộp các model chạy chung một lệnh; chạy riêng từng model thì đọc
   `group_shares.csv` / `player_shares.csv` trong thư mục của model đó.
 - TFT cần `mxnet-cu112`: nếu lỗi CUDA khi train, chạy `GPU=-1` (CPU) rồi ghi rõ trong phụ lục.
+
+## Sự cố đã gặp và đã vá
+
+- `ValueError: Key backend: 'module://matplotlib_inline.backend_inline'` — Colab export `MPLBACKEND` trỏ tới
+  `matplotlib_inline`, package không có trong các env conda. Đã buộc `export MPLBACKEND=Agg` trong roster
+  (`scripts/kaggle/03_tune.sh`, `04_xai.sh`, `02_run.py`) và trong `/content/env.sh`.
+- `ModuleNotFoundError: No module named 'pandas'` — `source /content/env.sh` đặt conda **base** lên đầu PATH,
+  nên `python` của driver là base env (không có pandas), trong khi `scripts/kaggle/02_run.py` cần pandas để
+  import `utils.protocol`. `_common.sh` giờ chọn `$CONDA_HOME/envs/neuralforecast/bin/python` (hoặc base, hoặc
+  `python3`) bằng cách thử `import pandas`.
+- Traceback chỉ vào `…/Forecast-Models-Evaluation` dù đang đứng ở `…-1` — `/content/env.sh` export `REPO_DIR`
+  của clone cũ. `_common.sh` chốt repo theo vị trí script và in `NOTE: REPO_DIR=… is another checkout` nếu
+  biến môi trường trỏ chỗ khác.
+
+Khi đã có nhiều bản clone, luôn chạy script **từ bản clone mình muốn** (`bash /content/…-1/scripts/colab/03_run.sh`);
+`REPO_DIR` trong env.sh không còn quyết định nữa.
+
