@@ -12,9 +12,6 @@ Roles decide the shape, not the file:
 * ``past_only`` (weather, state of charge) is passed over the context only.  No
   value after the origin is handed over, so the horizon behaves like persistence
   rather than like a perfect weather forecast.
-* ``static`` has no channel in any checkpoint.  It is reported and dropped
-  instead of being faked as a constant covariate, which for a single-series
-  forecast carries no information anyway.
 """
 
 from __future__ import annotations
@@ -41,7 +38,7 @@ def prepare_inputs(y_df: pd.DataFrame, roles: dict, level: str, horizon: int, sc
     if feature_columns and level != "L0":
         # A scaled code is what a checkpoint without an embedding table needs:
         # scale_covariates skips ``roles["categorical"]``, so that list is
-        # emptied for it and a quarter_hour in 0..95 cannot dominate a
+        # emptied for it and a raw ghi in W/m2 cannot dominate a
         # temperature in Celsius.
         scaling_roles = dict(roles, categorical=[]) if scale_categorical else roles
         frame = scale_covariates(frame, scaling_roles, train_end=context_end)
@@ -58,7 +55,6 @@ def prepare_inputs(y_df: pd.DataFrame, roles: dict, level: str, horizon: int, sc
         "report": {
             "level": level,
             "n_context": context_end,
-            "dropped_static": list(roles.get("static", [])) if level != "L0" else [],
         },
     }
     if level == "L0" or not feature_columns:

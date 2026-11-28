@@ -78,9 +78,6 @@ def freq_for(sampling_rate: float, dataset: str | None = None, style: str = "min
     return f"{minutes}T" if style == "T" else f"{minutes}min"
 
 
-def native_step_minutes(dataset: str) -> int:
-    return DATASET_STEP_MINUTES[dataset]
-
 
 def steps_per_day(sampling_rate: float, dataset: str | None = None) -> int:
     """Points in one wall-clock day after subsampling."""
@@ -118,11 +115,6 @@ def run_dir(root, dataset: str, model: str, sampling_rate: float, run: int = 1,
         return base / f"Epochs_{epochs}_{run}"
     return base / f"Run_{run}"
 
-
-def validation_bounds(test_start, days: int = 14):
-    """The ``days``-day block that ends exactly where the test window starts."""
-    test_start = pd.Timestamp(test_start)
-    return test_start - pd.Timedelta(days=days), test_start
 
 
 def validation_windows(n_points: int, horizon: int, steps_per_day_: int,

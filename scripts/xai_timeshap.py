@@ -48,7 +48,7 @@ if str(Path(__file__).resolve().parents[1]) not in sys.path:
 
 from utils.covariates import (CYCLIC_CALENDAR, TIMESHAP_COLUMNS, attach_block, cyclic_calendar,
                               cyclic_columns, expand_cyclic_names, group_columns,
-                              restrict_columns, roles_for, scale_covariates, shift_past_only)
+                              restrict_columns, roles_for, scale_covariates)
 from utils.protocol import horizon_for, sampling_tag,steps_per_day
 from utils.timeshap import (apply_coalition, additivity_residual, covariate_players,
                             drop_noop_players, enumerate_game, group_shares,
@@ -114,7 +114,7 @@ def scaled_frame(frame: pd.DataFrame, level: str, horizon: int):
     """Frame as a neural model sees it: covariates min-max scaled on the context."""
     feature_columns = [c for c in frame.columns if c not in ("unique_id", "ds", "y")]
     if level == "L0" or not feature_columns:
-        empty = {"known_future": [], "past_only": [], "static": [], "categorical": []}
+        empty = {"known_future": [], "past_only": [], "categorical": []}
         return frame, empty
     roles = roles_for(frame[feature_columns])
     scaled = scale_covariates(frame[feature_columns], roles, train_end=len(frame) - horizon)
@@ -341,18 +341,15 @@ def main(argv=None) -> int:
                         metavar="COLUMN",
                         help="Covariate columns the game and the model input use.  Default: "
                              + " ".join(TIMESHAP_COLUMNS)
-                             + ".  The default set is the one that survived ablation: it drops "
-                               "quarter_hour/hour*4+minute//15 and is_weekend/dayofweek>=5 "
-                               "(exact functions of kept columns), dni (r=0.82-0.87 with ghi), "
-                               "precipitation (near-constant), and temperature + wind_speed "
-                               "(< 4 %% horizon-MAE effect, and temperature hurts more often "
-                               "than it helps).  Pass every column to reproduce the older "
-                               "12-player game.")
+                             + ".  That is the set that survived ablation: the remaining "
+                               "weather columns (ghi, wind_speed) and the Belgium-only price "
+                               "and state columns are left out.  Pass every column to "
+                               "reproduce the older, wider game.")
     parser.add_argument("--all-covariates", action="store_true",
                         help="Take every covariate the COV frame carries instead of --covariates.  "
                              "This is the benchmark's own input set (calendar + weather + price + "
-                             "state), and with block players it still fits: 12-14 columns form "
-                             "5-7 blocks, i.e. 32-128 coalitions.")
+                             "state), and with block players it still fits: the columns form at "
+                             "most 8 blocks, i.e. at most 256 coalitions.")
     parser.add_argument("--max-players", type=int, default=12,
                         help="Refuse a game larger than this many players (2^N coalitions).")
     parser.add_argument("--dry-run", action="store_true", help="Print the player set and exit.")

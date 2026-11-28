@@ -4,7 +4,6 @@ import sys
 import warnings
 import logging
 from pathlib import Path
-import numpy as np
 import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -44,7 +43,7 @@ def timesfm3_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon, 
     test_df = y_df.iloc[-forecast_horizon:]
     feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
     roles = roles_for(y_df[feature_columns]) if feature_columns else {
-        "known_future": [], "past_only": [], "static": [], "categorical": []}
+        "known_future": [], "past_only": [], "categorical": []}
 
     if covariates:
         available = [c for c in covariates if c in feature_columns]
@@ -64,14 +63,11 @@ def timesfm3_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon, 
     arguments = timesfm3_covariates(payload)
     logging.info(
         "%s: context=%d steps (model reads %d), horizon=%d, covariates: %d known-future, "
-        "%d past-only, %d static dropped (no per-series channel in this checkpoint)",
+        "%d past-only",
         model_name, payload["context_end"], min(payload["context_end"], MAX_CONTEXT_POINTS),
         forecast_horizon, payload["report"].get("n_known_future", 0),
-        payload["report"].get("n_past_only", 0), len(payload["report"]["dropped_static"]),
+        payload["report"].get("n_past_only", 0),
     )
-    if payload["report"]["dropped_static"]:
-        logging.warning("%s: static metadata is not representable and was dropped: %s",
-                        model_name, ", ".join(payload["report"]["dropped_static"]))
 
     output = forecaster.predict(
         context=payload["context"],

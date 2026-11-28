@@ -8,9 +8,13 @@ the accelerator flag to every command it builds, guards the conda envs it will
 shell out to, and forwards the rest of the arguments untouched.
 
     python scripts/kaggle/02_run.py --dry-run --models LightGBM \
-        --datasets germany --samplings 25 --level COV --results-dir /kaggle/working/results
+        --datasets germany --samplings 25 --level COV --results-dir /kaggle/working/results_covariate
 
     python scripts/kaggle/02_run.py --models "LightGBM Chronos2 Timestral TimesFM3" --level COV
+
+The results root follows ``--level`` when neither ``--results-dir`` nor ``$RESULTS``
+is given: COV writes into ``<repo>/results_covariate``, L0 into ``<repo>/results``.
+That is the layout the tuning JSONs and the TimeSHAP wrapper expect too.
 """
 from __future__ import annotations
 
@@ -56,11 +60,16 @@ def main(argv=None) -> int:
     parser.add_argument("--samplings", nargs="+", type=float, default=None,
                         help="Omit for the runner's default: 25, 100/3, 50, 100.")
     parser.add_argument("--level", default="COV", choices=("COV", "L0"))
-    parser.add_argument("--results-dir", type=Path,
-                        default=Path(os.environ.get("RESULTS", "results")))
+    parser.add_argument("--results-dir", type=Path, default=None,
+                        help="Results root.  Default: $RESULTS when exported, otherwise "
+                             "results_covariate at --level COV and results at L0.")
     parser.add_argument("--force", action="store_true", help="Re-run complete cells.")
     parser.add_argument("--dry-run", action="store_true", help="Print the commands, run nothing.")
     args = parser.parse_args(argv)
+    if args.results_dir is None:
+        exported = os.environ.get("RESULTS")
+        args.results_dir = (Path(exported) if exported else
+                            REPO_DIR / ("results_covariate" if args.level == "COV" else "results"))
 
     original = runner.command_for
 

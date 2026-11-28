@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch hourly ERA5 weather (temperature, humidity, cloud, GHI, DNI, wind, rain).
+"""Fetch hourly ERA5 weather (temperature, humidity, cloud, GHI, wind).
 
 Source: Open-Meteo archive API (ERA5), free and keyless.
 Caches one CSV per site-year under ``data/exogenous/weather``.

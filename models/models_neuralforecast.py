@@ -81,15 +81,13 @@ def exog_lists(roles, level):
 
     ``hist_exog_list`` carries the measured covariates (weather, state of charge)
     and therefore never reaches the horizon; ``futr_exog_list`` carries calendar
-    and price, which are announced in advance; ``stat_exog_list`` is the hardware
-    table, one row per series.
+    and price, which are announced in advance.
     """
     if level == "L0":
         return {}
     lists = {
         "hist_exog_list": list(roles["past_only"]),
         "futr_exog_list": list(roles["known_future"]),
-        "stat_exog_list": list(roles["static"]),
     }
     return {name: cols for name, cols in lists.items() if cols}
 
@@ -115,7 +113,7 @@ def neural_forecast_model(
     y_df = y_df.iloc[::int(100/sampling_rate)].reset_index(drop=True)
     feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
     roles = roles_for(y_df[feature_columns]) if feature_columns else {
-        "known_future": [], "past_only": [], "static": [], "categorical": []}
+        "known_future": [], "past_only": [], "categorical": []}
     exog = exog_lists(roles, level)
     if exog.get("hist_exog_list") and not getattr(NFmodel, "EXOGENOUS_HIST", True):
         # nf refuses measured covariates for models that only take announced ones
@@ -125,13 +123,6 @@ def neural_forecast_model(
         dropped = exog.pop("hist_exog_list")
         logging.warning("%s %s accepts announced covariates only; dropping %d measured "
                         "covariate(s): %s", nf_model_name, model_name, len(dropped),
-                        ", ".join(dropped))
-    if exog.get("stat_exog_list") and not getattr(NFmodel, "EXOGENOUS_STAT", True):
-        # Same rule for hardware ratings: no static token exists in this model, so
-        # a static_* column cannot be carried at all.
-        dropped = exog.pop("stat_exog_list")
-        logging.warning("%s %s has no static covariate channel; dropping %d static "
-                        "column(s): %s", nf_model_name, model_name, len(dropped),
                         ", ".join(dropped))
     if level == "L0":
         logging.info("%s receives no covariates at L0 (paper baseline)", nf_model_name)
@@ -178,13 +169,9 @@ def neural_forecast_model(
             logging.info("%s tuned parameters: %s", nf_model_name, applied)
             model_kwargs.update(applied)
 
-    static_df = None
-    if exog.get("stat_exog_list"):
-        static_df = y_df.groupby("unique_id")[exog["stat_exog_list"]].first().reset_index()
-
     def fit_and_predict(kwargs):
         nf = NeuralForecast(models=[NFmodel(**kwargs)], freq=freq)
-        nf.fit(df=train_df, val_size=forecast_horizon, static_df=static_df)
+        nf.fit(df=train_df, val_size=forecast_horizon)
         if kwargs.get("futr_exog_list"):
             futr_df = nf.make_future_dataframe()
             # Assigning the values of that frame keeps its tz; assigning
@@ -325,7 +312,7 @@ if __name__ == "__main__":
     parser.add_argument("--runs", type=int, default=10, help="Number of runs.")
     parser.add_argument("--epochs", type=int, default=100, help="Training steps per model.")
     parser.add_argument("--exog_level", "--exog-level", choices=list(("L0", "COV")), default="COV",
-                        help="Covariate block: COV (day/hour + weather + price + static + state) or L0 (paper baseline).")
+                        help="Covariate block: COV (day/hour + weather + price + state) or L0 (paper baseline).")
     parser.add_argument("--params_json", type=Path, default=None, help="Tuned parameters (JSON) from scripts/tune_optuna.py.")
     parser.add_argument("--gpu", type=int, default=-1, help=GPU_HELP)
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")

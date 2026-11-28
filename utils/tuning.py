@@ -104,16 +104,3 @@ def tuned_resolution(root, model: str, dataset: str, level: str, sampling_rate: 
         return fallback, 100.0
     return exact, None
 
-
-def tuned_path(root, model: str, dataset: str, level: str, sampling_rate: float,
-               space_version: int = SPACE_VERSION) -> Path:
-    """JSON path of the parameters a reported cell has to load.
-
-    ``root`` is the results tree (``results/``); the tuning JSONs live in
-    ``<root>/tuning``.  The sampling rate in the name is the one the search ran
-    at, which is not necessarily the one being run -- see ``tuned_resolution``.
-    The version suffix is part of the name on purpose: a search whose space
-    changed cannot reuse the old study or overwrite the old file, so an old run
-    stays readable next to the new one.
-    """
-    return tuned_resolution(root, model, dataset, level, sampling_rate, space_version)[0]

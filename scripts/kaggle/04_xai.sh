@@ -10,9 +10,10 @@
 # Keep MODELS to one conda env per invocation if a cell must be reproducible alone.
 #
 # Players are one per COVARIATE BLOCK by default (BLOCKS=1): the benchmark's own
-# covariate set (calendar + weather + price + state) forms 5-7 blocks, so the exact
-# game is 2^5..2^7 = 32..128 calls per (dataset, series, model).  PER_VARIABLE=1
-# switches to one player per column, which is 2^12..2^14 and hours per cell.
+# covariate set (hour, dayofweek, 5 weather columns, plus price/state on
+# Belgium) forms 5-7 blocks, so the exact game is 2^5..2^7 = 32..128 calls per
+# (dataset, series, model).  PER_VARIABLE=1 switches to one player per column,
+# which is 2^7..2^9 = 128..512 on the current 7-9 column COV frame.
 # XAI_DRY_CHECK=1 prints the real counts without running anything.
 set -euo pipefail
 
@@ -23,9 +24,12 @@ set -euo pipefail
 export MPLBACKEND=Agg
 
 REPO_DIR="${REPO_DIR:-/kaggle/working/Forecast-Models-Evaluation}"
-RESULTS="${RESULTS:-/kaggle/working/results}"
-XAI_OUT="${XAI_OUT:-$RESULTS/xai_timeshap}"
 LEVEL="${LEVEL:-COV}"
+# Same root rule as 02_run.py / 03_tune.sh: the level decides the tree, so the tuned
+# JSONs this run reads are the ones 03_tune.sh wrote (--params-dir below).
+LEVEL_ROOT="results"; [ "$LEVEL" = "COV" ] && LEVEL_ROOT="results_covariate"
+RESULTS="${RESULTS:-$REPO_DIR/$LEVEL_ROOT}"
+XAI_OUT="${XAI_OUT:-$RESULTS/xai_timeshap}"
 SAMPLING="${SAMPLING:-25}"
 MODE="${MODE:-background}"
 BLOCKS="${BLOCKS:-1}"
@@ -98,7 +102,7 @@ for dataset in $DATASETS; do
       command=(conda run --no-capture-output -n "$(env_for "$model")" python scripts/xai_timeshap.py
                --dataset "$dataset" --series "$series" --models "$model" --level "$LEVEL"
                --sampling "$SAMPLING" --mode "$MODE" --epochs "$EPOCHS" --gpu "$GPU"
-               --max-players "$MAX_PLAYERS" --out "$out")
+               --max-players "$MAX_PLAYERS" --out "$out" --params-dir "$RESULTS/tuning")
       [ "$ALL_COVARIATES" = "1" ] && command+=(--all-covariates) || command+=(--covariates $COVARIATES)
       [ "$PER_VARIABLE" = "1" ] && command+=(--per-variable)
       [ "$COVARIATE_ONLY" = "1" ] && command+=(--covariate-only)

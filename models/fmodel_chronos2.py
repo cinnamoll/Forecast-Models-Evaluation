@@ -4,7 +4,6 @@ import sys
 import warnings
 import logging
 from pathlib import Path
-import numpy as np
 import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -55,7 +54,7 @@ def chronos2_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon, 
     if covariates and cycles:
         covariates = expand_cyclic_names(covariates, cycles)
     roles = roles_for(y_df[feature_columns]) if feature_columns else {
-        "known_future": [], "past_only": [], "static": [], "categorical": []}
+        "known_future": [], "past_only": [], "categorical": []}
 
     if covariates:
         available = [c for c in covariates if c in feature_columns]
@@ -73,15 +72,10 @@ def chronos2_forecast_model(y_df, model_name, save_dir, freq, forecast_horizon, 
 
     payload = prepare_inputs(y_df, roles, level, forecast_horizon)
     logging.info(
-        "%s: context=%d steps, horizon=%d, covariates: %d known-future, %d past-only, "
-        "%d static dropped (no per-series channel in this checkpoint)",
+        "%s: context=%d steps, horizon=%d, covariates: %d known-future, %d past-only",
         model_name, payload["context_end"], forecast_horizon,
         payload["report"].get("n_known_future", 0), payload["report"].get("n_past_only", 0),
-        len(payload["report"]["dropped_static"]),
     )
-    if payload["report"]["dropped_static"]:
-        logging.warning("%s: static metadata is not representable and was dropped: %s",
-                        model_name, ", ".join(payload["report"]["dropped_static"]))
 
     inputs = [chronos2_input(payload)]
     quantile_levels = [0.1, 0.5, 0.9]

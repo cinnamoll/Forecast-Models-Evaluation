@@ -2,17 +2,16 @@
 
 The improvement this module implements is one block of **calendar** features that
 every model receives, plus — where the dataset has them — measured weather, the
-day-ahead price, static hardware metadata and the BESS state of charge:
+day-ahead price and the BESS state of charge:
 
-    calendar   quarter_hour, hour, minute, dayofweek, is_weekend
-    weather    temperature, humidity, cloud_cover, ghi, dni, wind_speed, precipitation
+    calendar   hour, dayofweek
+    weather    temperature, humidity, cloud_cover, ghi, wind_speed
     price      day_ahead_price            (Belgium only)
-    static     static_<column>            (Belgium only, one value per house)
     state      soc                        (Belgium BESS only)
 
-The calendar columns use exactly the definitions of the paper's loaders
-(``utils/dataset_config.py``, ``quarter_hour = hour * 4 + minute // 15``), so the
-baseline of the original table is reconstructed when ``level="L0"``.
+The calendar columns are the ones the paper's loaders build
+(``utils/dataset_config.py``, ``hour`` and ``dayofweek``), so the baseline of the
+original table is reconstructed when ``level="L0"``.
 
 Role split (the part that decides whether a model leaks):
 
@@ -23,7 +22,6 @@ Role split (the part that decides whether a model leaks):
   context only.  The horizon therefore behaves like persistence even though no
   model is ever handed a persisted number: the channel simply stops at the
   origin.
-* ``static`` — hardware metadata, constant per entity.
 
 Data sources, all under ``data/exogenous``:
 
@@ -34,7 +32,6 @@ Data sources, all under ``data/exogenous``:
 * ``Belgium/<house dir>/day_ahead_prices.csv`` — 15-minute, EUR/kWh.
 * ``Belgium/<house dir>/soc.csv`` — 15-minute state of charge.  Readings outside
   ``[0, 1]`` are sensor glitches and are treated as missing.
-* ``Belgium/belgium_hardware.csv`` — one row per house.
 """
 
 from __future__ import annotations
@@ -49,12 +46,10 @@ WEATHER_COLUMNS = {
     "relative_humidity_2m": "humidity",
     "cloud_cover": "cloud_cover",
     "shortwave_radiation": "ghi",
-    "direct_normal_irradiance": "dni",
     "wind_speed_10m": "wind_speed",
-    "precipitation": "precipitation",
 }
 
-CALENDAR_COLUMNS = ("quarter_hour", "hour", "minute", "dayofweek", "is_weekend")
+CALENDAR_COLUMNS = ("hour", "dayofweek")
 #: Covariate players of the TimeSHAP game.  ``temperature`` stands here instead of
 #: ``ghi``: on these series the ablation effect of ``temperature`` stayed under 4 %
 #: (removing it even helped on three of four model/series pairs) while ``ghi`` cost
@@ -162,20 +157,14 @@ def calendar_frame(index: pd.DatetimeIndex) -> pd.DataFrame:
     """The paper's day/hour block, one column per feature.
 
     Definitions are copied from ``utils/dataset_config.py`` so the ``L0`` run
-    reproduces the original design: ``quarter_hour`` is the index of the quarter
-    hour inside the day, ``is_weekend`` flags Saturday and Sunday.
+    reproduces the original design: ``hour`` is the hour of the day and
+    ``dayofweek`` runs Monday..Sunday as 0..6.
     """
     index = pd.DatetimeIndex(index)
-    hour = index.hour.to_numpy()
-    minute = index.minute.to_numpy()
-    dayofweek = index.dayofweek.to_numpy()
     return pd.DataFrame(
         {
-            "quarter_hour": hour * 4 + minute // 15,
-            "hour": hour,
-            "minute": minute,
-            "dayofweek": dayofweek,
-            "is_weekend": (dayofweek >= 5).astype(int),
+            "hour": index.hour.to_numpy(),
+            "dayofweek": index.dayofweek.to_numpy(),
         },
         index=index,
     )
@@ -283,51 +272,13 @@ def soc_frame(dataset: str, house: int | None, task: str, index: pd.DatetimeInde
     return pd.DataFrame({"soc": aligned.to_numpy()}, index=pd.DatetimeIndex(index))
 
 
-# ----------------------------------------------------------------------- static
-
-def static_frame(dataset: str, entity: str, index: pd.DatetimeIndex) -> pd.DataFrame:
-    """Hardware metadata of one entity, broadcast over the series.
-
-    ``bess_model`` and ``ac_phase`` are strings and are integer-coded like the
-    calendar columns; the rest are physical ratings (kWp, kWh) and stay numeric.
-    """
-    if dataset != "belgium":
-        return pd.DataFrame(index=index)
-    path = Path(__file__).resolve().parents[1] / "data" / "exogenous" / "Belgium" / "belgium_hardware.csv"
-    if not path.exists():
-        return pd.DataFrame(index=index)
-    table = pd.read_csv(path).set_index("entity_id")
-    if entity not in table.index:
-        return pd.DataFrame(index=index)
-    row = table.loc[entity]
-    values = {}
-    for column in ("pv_peak_kwp", "bess_energy_kwh", "bess_charge_kw",
-                   "bess_discharge_kw", "inverter_max_ac_kw", "house_breaker_kva"):
-        if column in row.index and pd.notna(row[column]):
-            values[f"static_{column}"] = np.full(len(index), float(row[column]))
-    for column in ("bess_model", "ac_phase"):
-        if column in row.index and pd.notna(row[column]):
-            values[f"static_{column}"] = np.full(len(index), float(_code(str(row[column]))))
-    if not values:
-        return pd.DataFrame(index=index)
-    return pd.DataFrame(values, index=pd.DatetimeIndex(index))
-
-
-def _code(value: str, vocabulary: tuple[str, ...] | None = None) -> int:
-    """Stable integer code of one categorical value (sorted vocabulary)."""
-    vocabulary = vocabulary or ("mono", "three")
-    ordered = tuple(sorted(set(vocabulary) | {value}))
-    return ordered.index(value)
-
-
 # ------------------------------------------------------------------- assembly
 
 def roles_for(frame: pd.DataFrame) -> dict:
     """Split the covariate columns of ``frame`` by role.
 
     ``known_future`` are the columns a model may see over the horizon (calendar
-    plus the day-ahead price); everything else measured is ``past_only``;
-    ``static_`` prefixed columns are constant per entity.
+    plus the day-ahead price); everything else measured is ``past_only``.
     """
     # Calendar and the auction are known in advance; the price is Belgium-only.
     # The cyclic pair of a calendar code is calendar too - and it must stay out of
@@ -336,13 +287,11 @@ def roles_for(frame: pd.DataFrame) -> dict:
     calendar_names = tuple(name for base in CYCLIC_CALENDAR for name in cyclic_columns(base))
     known_future_columns = CALENDAR_COLUMNS + calendar_names + ("day_ahead_price",)
     # Codes the models embed or target-encode instead of scaling.
-    categorical_columns = CALENDAR_COLUMNS + ("static_ac_phase", "static_bess_model")
+    categorical_columns = CALENDAR_COLUMNS
 
-    known_future, past_only, static, categorical = [], [], [], []
+    known_future, past_only, categorical = [], [], []
     for column in frame.columns:
-        if column.startswith("static_"):
-            static.append(column)
-        elif column in known_future_columns:
+        if column in known_future_columns:
             known_future.append(column)
         else:
             past_only.append(column)
@@ -351,7 +300,6 @@ def roles_for(frame: pd.DataFrame) -> dict:
     return {
         "known_future": known_future,
         "past_only": past_only,
-        "static": static,
         "categorical": [c for c in categorical if c in frame.columns],
     }
 
@@ -377,18 +325,18 @@ def restrict_columns(frame: pd.DataFrame, roles: dict, keep) -> tuple:
     # model as features).
     covariates = [c for c in pruned.columns if c not in ("unique_id", "ds", "y")]
     if not covariates:
-        return pruned, {"known_future": [], "past_only": [], "static": [], "categorical": []}
+        return pruned, {"known_future": [], "past_only": [], "categorical": []}
     return pruned, roles_for(pruned[covariates])
 
 
-def build_covariates(dataset: str, entity: str, index: pd.DatetimeIndex, task: str,
+def build_covariates(dataset: str, index: pd.DatetimeIndex, task: str,
                      level: str = "COV", house: int | None = None):
     """Covariate frame aligned to ``index`` plus its role split.
 
     ``level="L0"`` returns the paper's baseline: the calendar block only, and for
     a direct multi-step regressor the two columns the original loaders used
-    (``quarter_hour``, plus ``is_weekend`` for Zonnedael).  ``level="COV"``
-    returns everything the dataset has.
+    (``hour``, plus ``dayofweek`` for Zonnedael).  ``level="COV"`` returns
+    everything the dataset has.
     """
     index = pd.DatetimeIndex(index)
     if level not in ("L0", "COV"):
@@ -399,7 +347,6 @@ def build_covariates(dataset: str, entity: str, index: pd.DatetimeIndex, task: s
         blocks.append(weather_frame(dataset, index))
         blocks.append(price_frame(dataset, house, index))
         blocks.append(soc_frame(dataset, house, task, index))
-        blocks.append(static_frame(dataset, entity, index))
 
     frame = pd.concat(blocks, axis=1)
     frame = frame.loc[:, ~frame.columns.duplicated()]
@@ -407,7 +354,7 @@ def build_covariates(dataset: str, entity: str, index: pd.DatetimeIndex, task: s
     frame.index.name = "ds"
     if frame.isna().any().any():
         missing = frame.columns[frame.isna().any()].tolist()
-        raise ValueError(f"covariates {missing} carry NaN for {dataset}/{entity}")
+        raise ValueError(f"covariates {missing} carry NaN for {dataset}")
     return frame, roles_for(frame)
 
 
@@ -448,7 +395,7 @@ def attach_block(frame: pd.DataFrame, dataset: str, house: int | None, task: str
 def scale_covariates(frame: pd.DataFrame, roles: dict, train_end: int) -> pd.DataFrame:
     """Min-max scale continuous covariates to [0, 1] on the training rows.
 
-    Neural models need bounded inputs; a raw ``quarter_hour`` in 0..95 next to a
+    Neural models need bounded inputs; a raw ``ghi`` in W/m2 next to a
     temperature of 5 C would otherwise dominate the first layer.  The bounds are
     taken from rows ``< train_end`` only, so the scaling cannot import the test
     range.  Categorical codes are left as integers because the models embed them.
@@ -543,25 +490,21 @@ def attach_target_features(frame: pd.DataFrame, y: pd.Series, horizon: int,
 def column_groups(columns) -> dict:
     """``column -> block name`` for the TimeSHAP player set.
 
-    Grouping is physical, not syntactic: ``quarter_hour`` is
-    ``hour * 4 + minute // 15``, so the three time-of-day columns carry the same
-    information and must not be scored as three independent players (Shapley would
-    split the credit arbitrarily between them).
+    Grouping is physical, not syntactic: ``ghi`` and ``cloud_cover`` both describe
+    the sky and are scored as one player, so Shapley does not split credit between
+    two channels that carry the same information.
     """
     feature_groups = {
-        "time_of_day": ("quarter_hour", "hour", "minute") + cyclic_columns("hour"),
-        "day_of_week": ("dayofweek", "is_weekend") + cyclic_columns("dayofweek"),
+        "time_of_day": ("hour",) + cyclic_columns("hour"),
+        "day_of_week": ("dayofweek",) + cyclic_columns("dayofweek"),
         "temperature": ("temperature",),
-        "radiation": ("ghi", "dni", "cloud_cover"),
-        "air": ("humidity", "wind_speed", "precipitation"),
+        "radiation": ("ghi", "cloud_cover"),
+        "air": ("humidity", "wind_speed"),
         "price": ("day_ahead_price",),
         "state": ("soc",),
     }
     groups = {}
     for column in columns:
-        if column.startswith("static_"):
-            groups[column] = "static"
-            continue
         for group, members in feature_groups.items():
             if column in members:
                 groups[column] = group
@@ -574,7 +517,7 @@ def column_groups(columns) -> dict:
 def group_columns(columns) -> dict:
     """``block name -> [columns]``, in the physical block order."""
     group_order = ("time_of_day", "day_of_week", "temperature", "radiation",
-                   "air", "price", "state", "static")
+                   "air", "price", "state")
     per_column = column_groups(columns)
     grouped = {}
     for column, group in per_column.items():

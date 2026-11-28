@@ -1,9 +1,9 @@
-"""Per-dataset exogenous source configuration.
+"""Per-dataset ERA5 sampling site.
 
-Only the ERA5 sampling site per dataset is left here.  Data directories are
-spelled out where the fetch scripts write them, and the covariate set itself
-(calendar + weather everywhere, soc / day_ahead_price / hardware for Belgium) is
-built in ``utils/covariates.py``.
+Only the site coordinates are here.  Data directories are spelled out where the
+fetch script writes them, and the covariate set itself (calendar + weather
+everywhere, soc / day_ahead_price for Belgium) is built in
+``utils/covariates.py``.
 """
 
 # Coordinates are the point ERA5 is sampled at.  They are deliberately coarse:
@@ -49,41 +49,6 @@ SITES = {
         "approx": True,
     },
 }
-
-
-class MissingSourceError(RuntimeError):
-    """Raised when a real data source is absent instead of silently faking it."""
-
-
-def minutes_per_step(freq):
-    """Return the number of minutes in one step for a pandas-style freq string."""
-    if freq is None:
-        raise ValueError("freq is required; pass the series frequency, e.g. '15min'")
-    aliases = {
-        "15min": 15,
-        "15t": 15,
-        "30min": 30,
-        "30t": 30,
-        "1h": 60,
-        "h": 60,
-        "60min": 60,
-        "hourly": 60,
-    }
-    key = str(freq).strip().lower()
-    if key in aliases:
-        return aliases[key]
-    raise ValueError(f"Unsupported freq {freq!r}. Known: {sorted(aliases)}")
-
-
-def steps_per_hour(freq):
-    minutes = minutes_per_step(freq)
-    if 60 % minutes:
-        raise ValueError(f"freq {freq!r} does not divide an hour evenly")
-    return 60 // minutes
-
-
-def steps_per_day(freq):
-    return 24 * steps_per_hour(freq)
 
 
 def site_for(dataset_name):

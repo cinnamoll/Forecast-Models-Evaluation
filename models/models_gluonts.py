@@ -37,7 +37,7 @@ PAPER_WINDOW = (pd.Timestamp("2024-01-01 00:00:00", tz="UTC"),
 #: architecture and the optimiser, never the window or the covariate wiring.
 PROTECTED = ("freq", "prediction_length", "trainer", "context_length",
              "dynamic_feature_dims", "dynamic_cardinalities",
-             "static_feature_dims", "static_cardinalities", "past_dynamic_features")
+             "past_dynamic_features")
 
 
 def setup_model_logger(save_dir):
@@ -82,7 +82,6 @@ def covariate_spec(frame, roles, level, train_end):
     scaled = scale_covariates(frame[feature_columns], roles, train_end=train_end)
     entry, kwargs = {}, {}
     dynamic_dims, dynamic_cards = {}, {}
-    static_dims, static_cards = {}, {}
 
     for column in roles["known_future"]:
         values = scaled[column].to_numpy(dtype="float32")
@@ -99,23 +98,10 @@ def covariate_spec(frame, roles, level, train_end):
         entry[column] = values
         dynamic_dims[column] = 1
 
-    for column in roles["static"]:
-        values = scaled[column].to_numpy()
-        if column in roles["categorical"]:
-            entry[column] = np.array([float(values[0])], dtype="float32")
-            static_cards[column] = int(values.max()) + 1
-        else:
-            entry[column] = np.array([float(values[0])], dtype="float32")
-            static_dims[column] = 1
-
     if dynamic_dims:
         kwargs["dynamic_feature_dims"] = dynamic_dims
     if dynamic_cards:
         kwargs["dynamic_cardinalities"] = dynamic_cards
-    if static_dims:
-        kwargs["static_feature_dims"] = static_dims
-    if static_cards:
-        kwargs["static_cardinalities"] = static_cards
     if roles["past_only"]:
         # The names must also appear in ``dynamic_feature_dims``: the estimator
         # pops them out of that dict to build the past-only channel.
@@ -164,7 +150,7 @@ def train_gluonts_model(y_df, model_name, save_dir, model_class, sampling_rate, 
 
     feature_columns = [c for c in y_df.columns if c not in ("unique_id", "ds", "y")]
     roles = roles_for(y_df[feature_columns]) if feature_columns else {
-        "known_future": [], "past_only": [], "static": [], "categorical": []}
+        "known_future": [], "past_only": [], "categorical": []}
     # The training entry ends at the forecast origin, so its covariate arrays must
     # end there too: the estimator stacks them with a time-feature block of
     # ``len(past_target)`` rows and refuses to stack arrays of two lengths.
@@ -181,9 +167,9 @@ def train_gluonts_model(y_df, model_name, save_dir, model_class, sampling_rate, 
         logging.info("%s receives no covariates at L0 (paper baseline)", model_name)
     else:
         logging.info(
-            "%s covariates: %d known-future fields, %d past-only dynamic, %d static, %d categorical",
+            "%s covariates: %d known-future fields, %d past-only dynamic, %d categorical",
             model_name, len(roles["known_future"]), len(roles["past_only"]),
-            len(roles["static"]), len(roles["categorical"]),
+            len(roles["categorical"]),
         )
 
     train_ds = to_gluonts_dataset(train_df, freq, start_idx, train_entry_extra)
@@ -317,7 +303,7 @@ if __name__ == "__main__":
     parser.add_argument("--runs", type=int, default=10, help="Number of runs.")
     parser.add_argument("--epochs", type=int, default=100, help="Training epochs.")
     parser.add_argument("--exog_level", "--exog-level", choices=list(("L0", "COV")), default="COV",
-                        help="Covariate block: COV (day/hour + weather + price + static + state) or L0 (paper baseline).")
+                        help="Covariate block: COV (day/hour + weather + price + state) or L0 (paper baseline).")
     parser.add_argument("--params_json", type=Path, default=None, help="Tuned parameters (JSON) from scripts/tune_optuna.py.")
     parser.add_argument("--gpu", type=int, default=-1, help=GPU_HELP)
     parser.add_argument("--results_dir", type=Path, default=PROJECT_ROOT / "results", help="Root directory for generated results.")

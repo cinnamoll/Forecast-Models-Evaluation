@@ -236,53 +236,6 @@ def build_state_table(found, out_path=None, duplicates=()):
     return out_path, table, coverage.round(4).to_dict(), faults
 
 
-def verify_against_hardware(found, hardware_path=None):
-    """Compare nameplate limits with the extremes actually reached in the release.
-
-    This is a cross-check on both inputs, not an assertion: where the measured
-    series exceeds the published nameplate the paper's Table A.6 does not bound
-    the operation, and the reader needs to know that before the static columns
-    become covariates.
-    """
-    hardware_path = Path(hardware_path or PROJECT_ROOT / "data" / "exogenous" / "Belgium" / "belgium_hardware.csv")
-    if not hardware_path.exists():
-        return None
-    hardware = pd.read_csv(hardware_path).set_index("entity_id")
-
-    rows = []
-    for house in sorted(found):
-        source = None
-        for period in PERIODS:
-            path = found[house].get(period)
-            if path is not None and (Path(path) / "battery.csv").exists():
-                source = Path(path) / "battery.csv"
-                break
-        entity = f"house_{house}"
-        if source is None or entity not in hardware.index:
-            rows.append({"entity_id": entity, "note": "no battery.csv in the release"})
-            continue
-
-        series = pd.read_csv(source)
-        values = series[series.columns[1]].astype(float)
-        nameplate_charge = float(hardware.loc[entity, "bess_charge_kw"])
-        nameplate_discharge = float(hardware.loc[entity, "bess_discharge_kw"])
-        # Negative is charging (the release's BESS sign convention).
-        observed_charge = abs(min(values.min(), 0.0))
-        observed_discharge = max(values.max(), 0.0)
-        glitches = int((values.abs() > 10 * max(nameplate_charge, nameplate_discharge)).sum())
-        rows.append(
-            {
-                "entity_id": entity,
-                "charge_kw": nameplate_charge,
-                "charge_observed_kw": round(observed_charge, 3),
-                "discharge_kw": nameplate_discharge,
-                "discharge_observed_kw": round(observed_discharge, 3),
-                "sensor_glitches": glitches,
-            }
-        )
-    return pd.DataFrame(rows)
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--release-dir", type=Path,
@@ -337,24 +290,6 @@ def main(argv=None):
         print(f"  {entity}: {fraction:.1%} of steps carry a SOC")
     for fault in faults:
         print(f"  WARNING: {fault}")
-
-    verification = verify_against_hardware(found)
-    if verification is None:
-        print("\nno hardware table at data/exogenous/Belgium/belgium_hardware.csv; "
-              "run scripts/fetch/build_metadata.py to cross-check nameplate limits")
-    else:
-        print("\nnameplate (paper Table A.6) vs measured extremes in the release:")
-        print(verification.to_string(index=False))
-        # The cross-check needs the measured BESS series; when the release no
-        # longer ships it, the table above already says so per house.
-        if "charge_observed_kw" in verification.columns:
-            exceeds = verification.dropna(subset=["charge_observed_kw"])
-            exceeds = exceeds[
-                (exceeds["charge_observed_kw"] > exceeds["charge_kw"] + 1e-6)
-                | (exceeds["discharge_observed_kw"] > exceeds["discharge_kw"] + 1e-6)
-            ]
-            for entity in exceeds["entity_id"]:
-                print(f"  WARNING: {entity} operates outside the published power limits")
 
     return 0
 

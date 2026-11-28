@@ -102,10 +102,10 @@ def players_per_variable(frame: pd.DataFrame, roles: Dict[str, Sequence[str]],
 
     Two caveats are inherent to the perturbation, not to this function:
 
-    * Columns that are deterministic functions of each other (``quarter_hour`` is
-      ``hour * 4 + minute // 15``) are never switched off independently in a
-      coalition, so no Shapley game can separate them: the credit between them is
-      arbitrary and must not be read as evidence about either one.
+    * Columns that are deterministic functions of each other are never switched
+      off independently in a coalition, so no Shapley game can separate them: the
+      credit between them is arbitrary and must not be read as evidence about
+      either one.  Such a pair is merged into one player above.
     * The rows a column owns follow its role, exactly as in the block game: a
       known-future column owns the horizon rows too, a past-only column only the
       context.

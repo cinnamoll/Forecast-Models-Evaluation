@@ -268,7 +268,7 @@ if __name__ == "__main__":
         default=["NaiveMovingAverage"], help="Models to evaluate.")
     parser.add_argument("--runs", type=int, help="Runs per model; otherwise 1 for deterministic models and 10 for others.")
     parser.add_argument("--exog_level", "--exog-level", choices=list(("L0", "COV")), default="COV",
-                        help="Covariate block: COV (day/hour + weather + price + static + state) or "
+                        help="Covariate block: COV (day/hour + weather + price + state) or "
                              "L0 (the paper's baseline).")
     parser.add_argument("--params_json", type=Path, default=None,
                         help="Tuned parameters from scripts/tune_optuna.py.")

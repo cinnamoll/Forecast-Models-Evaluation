@@ -45,8 +45,7 @@ import pandas as pd
 if str(Path(__file__).resolve().parents[1]) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from utils.covariates import (attach_target_features, calendar_frame, roles_for,
-                            scale_covariates, shift_past_only)
+from utils.covariates import attach_target_features, calendar_frame, roles_for, shift_past_only
 from utils.protocol import (freq_for, horizon_for, sampling_tag, step_minutes,
                             steps_per_day, validation_windows)
 from utils.tuning import SPACE_VERSION, TUNE_SETS, transfer_targets
@@ -82,9 +81,9 @@ NATIVE_DATASET = {"germany": "germany", "zonnedael9": "zonnedael", "belgium_pv1"
 #: baseline for the neural models) and the 1D loaders rebuild the calendar
 #: themselves; this is the block they use.
 L0_CALENDAR = {
-    "germany": ("quarter_hour",),
-    "zonnedael9": ("quarter_hour", "is_weekend"),
-    "belgium_pv1": ("quarter_hour",),
+    "germany": ("hour",),
+    "zonnedael9": ("hour", "dayofweek"),
+    "belgium_pv1": ("hour",),
 }
 
 
@@ -207,17 +206,6 @@ def l0_features(frame, dataset: str):
     calendar = calendar_frame(pd.DatetimeIndex(frame["ds"]))
     return calendar[list(L0_CALENDAR[dataset])].reset_index(drop=True)
 
-
-def _prepare_window(frame, train_end: int, eval_end: int):
-    """Rows up to ``eval_end`` with continuous covariates scaled on train rows."""
-    window_frame = frame.iloc[:eval_end].reset_index(drop=True)
-    feature_columns = [c for c in window_frame.columns if c not in ("unique_id", "ds", "y")]
-    roles = roles_for(window_frame[feature_columns]) if feature_columns else {
-        "known_future": [], "past_only": [], "static": [], "categorical": []}
-    if feature_columns:
-        scaled = scale_covariates(window_frame[feature_columns], roles, train_end=train_end)
-        window_frame = pd.concat([window_frame.drop(columns=feature_columns), scaled], axis=1)
-    return window_frame, roles
 
 
 # -------------------------------------------------------------------- objectives
@@ -419,7 +407,7 @@ def main(argv=None) -> int:
              else frame.drop(columns=["unique_id", "ds", "y"]).reset_index(drop=True))
         y = frame["y"].reset_index(drop=True)
         roles = roles_for(X) if len(X.columns) else {
-            "known_future": [], "past_only": [], "static": [], "categorical": []}
+            "known_future": [], "past_only": [], "categorical": []}
         if roles["past_only"]:
             # After subsampling, so ``horizon`` is a horizon of the grid the
             # model is actually trained on: shifting before it, at 33 %, moved
